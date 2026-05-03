@@ -610,11 +610,6 @@
 
         let playing = true;
         let canvasFocus = false;
-
-        let pianoReady = false;
-        let violinReady = false;
-        let fluteReady = false;
-
         function applyZoom(){
             const c = document.querySelector('#sketch canvas');
             if (!c) return;
@@ -733,24 +728,7 @@
         function initSamplers(){
     if (pianoSample) return;
 
-    pianoSample = new Tone.Sampler({
-        urls: {
-            'A1':'A1.mp3','A2':'A2.mp3','A3':'A3.mp3','A4':'A4.mp3','A5':'A5.mp3','A6':'A6.mp3','A7':'A7.mp3',
-            'As1':'As1.mp3','As2':'As2.mp3','As3':'As3.mp3','As4':'As4.mp3','As5':'As5.mp3','As6':'As6.mp3','As7':'As7.mp3',
-            'B1':'B1.mp3','B2':'B2.mp3','B3':'B3.mp3','B4':'B4.mp3','B5':'B5.mp3','B6':'B6.mp3','B7':'B7.mp3',
-            'C1':'C1.mp3','C2':'C2.mp3','C3':'C3.mp3','C4':'C4.mp3','C5':'C5.mp3','C6':'C6.mp3','C7':'C7.mp3','C8':'C8.mp3',
-            'Cs1':'Cs1.mp3','Cs2':'Cs2.mp3','Cs3':'Cs3.mp3','Cs4':'Cs4.mp3','Cs5':'Cs5.mp3','Cs6':'Cs6.mp3','Cs7':'Cs7.mp3',
-            'D1':'D1.mp3','D2':'D2.mp3','D3':'D3.mp3','D4':'D4.mp3','D5':'D5.mp3','D6':'D6.mp3','D7':'D7.mp3',
-            'Ds1':'Ds1.mp3','Ds2':'Ds2.mp3','Ds3':'Ds3.mp3','Ds4':'Ds4.mp3','Ds5':'Ds5.mp3','Ds6':'Ds6.mp3','Ds7':'Ds7.mp3',
-            'E1':'E1.mp3','E2':'E2.mp3','E3':'E3.mp3','E4':'E4.mp3','E5':'E5.mp3','E6':'E6.mp3','E7':'E7.mp3',
-            'F1':'F1.mp3','F2':'F2.mp3','F3':'F3.mp3','F4':'F4.mp3','F5':'F5.mp3','F6':'F6.mp3','F7':'F7.mp3',
-            'Fs1':'Fs1.mp3','Fs2':'Fs2.mp3','Fs3':'Fs3.mp3','Fs4':'Fs4.mp3','Fs5':'Fs5.mp3','Fs6':'Fs6.mp3','Fs7':'Fs7.mp3',
-            'G1':'G1.mp3','G2':'G2.mp3','G3':'G3.mp3','G4':'G4.mp3','G5':'G5.mp3','G6':'G6.mp3','G7':'G7.mp3',
-            'Gs1':'Gs1.mp3','Gs2':'Gs2.mp3','Gs3':'Gs3.mp3','Gs4':'Gs4.mp3','Gs5':'Gs5.mp3','Gs6':'Gs6.mp3','Gs7':'Gs7.mp3',
-        },
-        baseUrl: 'piano/',
-        onload: () => { pianoReady = true; }
-    }).toDestination();
+    pianoSample = new Tone.PolySynth(Tone.Synth).toDestination();
 
     violinSample = new Tone.Sampler({
         urls: {
@@ -760,7 +738,6 @@
             'G3':'G3.mp3','G4':'G4.mp3','G5':'G5.mp3','G6':'G6.mp3'
         },
         baseUrl: 'violin/',
-        onload: () => { violinReady = true; }
     }).toDestination();
 
     fluteSample = new Tone.Sampler({
@@ -770,8 +747,12 @@
             'E4':'E4.mp3','E5':'E5.mp3','E6':'E6.mp3'
         },
         baseUrl: 'flute/',
-        onload: () => { fluteReady = true; }
     }).toDestination();
+
+    Tone.loaded().then(() => {
+        sampleReady = true;
+        document.getElementById('restart-button').textContent = 'restart ✓';
+    });
 }
     /*function initSamplers(){
     if (pianoSample) return;
@@ -1593,11 +1574,9 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(pianoSample, s.effects); s._lastFxKey = fxKey;}
                 pianoSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
-                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
-                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){pianoSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){pianoSample.triggerAttack(pitch); s._activePitch = pitch;}
             }
             //violin
             if (s.type === 'violin'){
@@ -1605,11 +1584,9 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(violinSample, s.effects); s._lastFxKey = fxKey;}
                 violinSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
-                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
-                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){violinSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){violinSample.triggerAttack(pitch); s._activePitch = pitch;}
             }
             //flute
             if (s.type === 'flute'){
@@ -1617,11 +1594,9 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(fluteSample, s.effects); s._lastFxKey = fxKey;}
                 fluteSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
-                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
-                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){fluteSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){fluteSample.triggerAttack(pitch); s._activePitch = pitch;}
             }
         }
         function triggerRelease(s){
