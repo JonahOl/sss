@@ -1,4 +1,731 @@
-function initSamplers(){
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUSIC</title>
+    <!--import p5js-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <!--import tonejs-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column; /*stack items vertically*/
+            min-height: 100vh;
+            background: #fff;
+        }
+        /*Black shape box at top of screen that holds shape patches icons*/
+        #shape-box{
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 6px 14px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            height: 50px;
+            flex-shrink: 0; /*don't compress when canvas grows*/
+        }
+        #shape-box > span, #shape-box > div > span:not(.shape-hoverbox){
+            color: #888;
+            font-family: monospace;
+            font-size: 10px;
+            margin-right: 4px;
+        }
+        /*#shape-box span{
+            color: #888;
+            font-family: monospace;
+            font-size: 10px;
+            margin-right: 4px;
+        }*/
+        /*shapes in shape box */
+        .shape-box-item {
+            cursor: grab;
+            user-select: none;
+            position: relative; /* placeholder*/
+        }
+        /*word show on hover*/
+        .shape-box-item .shape-hoverbox{
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgb(170, 215, 133);
+            color: #eee;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 3px 7px;
+            border-radius: 3px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            z-index: 9999;
+
+        }
+        .shape-box-item:hover .shape-hoverbox{
+            opacity:1;
+        }
+        .shape-box-item svg{
+            display:block;
+        }
+        /*canvas fills rest of space scroll*/
+        #sketch{
+            height: calc(100vh - 250px);
+            flex:none;
+            position:relative;
+            overflow-x: scroll;
+            overflow-y:scroll;
+        }
+        /*text editor section at bottom*/
+        #code-editor{
+            flex: 0px 0px 160px;
+            background: rgb(149, 153, 236);
+            color: #fff;
+            min-height: 200px;
+            border: none;
+            outline: none;
+            padding: 10px;
+            font-family:'Times New Roman', Times, serif;
+            font-size: 10px;
+            line-height: 1.5;
+            resize: none;
+            caret-color: white;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        /*#code-bar{
+            display: flex;
+            padding: 8px;
+            border-top: 1px solid #ccc;
+            background: #fff
+        }
+        #code-input{
+            flex:1;
+            padding: 6px 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #code-input::placeholder{color: #aaa;}*/
+        /*copy/delete bottom right*/
+        #copy-button {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s, background 0.15s;
+            z-index: 999;
+        }
+        #copy-button:hover{
+            opacity: 1;
+            background: #333;
+        }
+        /*green when copied*/
+        #copy-button.copied{
+            background: #2a7a2a;
+            border-color: #4caf50;
+        }
+        #delete-button {
+            position: fixed;
+            bottom: 12px;
+            right: 80px;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s, background 0.15s;
+            z-index: 999;
+        }
+        #delete-button:hover{
+            opacity: 1;
+            background: #333;
+        }
+        /*green when deleted*/
+        #delete-button.deleted{
+            background: #2a7a2a;
+            border-color: #4caf50;
+        }
+        /*pause play flipping button*/
+        #pause-play{
+            position: fixed;
+            bottom: 12px;
+            right: 160px;
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #pause-play:hover{
+            opacity: 1;
+            background: #333;
+        }
+        /*save/load on canvas top right*/
+        #save-button{
+            position: fixed;
+            top: 65px;
+            right: 60px;
+            background: #eee8e8;
+            color: rgb(0, 0, 0);
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #save-button:hover{
+            opacity: 1;
+            background: #333;
+        }
+        #save-button.saved{
+            background: #2a7a2a;
+            border-color: #4caf50;
+        }
+        #load-button{
+            position: fixed;
+            top: 65px;
+            right: 10px;
+            background:  #eee8e8;
+            color: rgb(0, 0, 0);
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #load-button:hover{
+            opacity: 1;
+            background: #333;
+        }
+        #load-button.saved{
+            background: #2a7a2a;
+            border-color: #4caf50;
+        }
+        #new-page-button{
+            position:fixed;
+            top: 65px;
+            right:115px;
+            background: #eee8e8;
+            color:rgb(0, 0, 0);
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #new-page-button:hover{opacity:1; background: #333; color: #fff;}
+        #mute-button{
+            position: fixed;
+            top: 65px;
+            right: 170px;
+            background:#eee8e8;
+            color: rgb(0,0,0);
+            border: 1px solid #444;
+            padding:4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius:3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #mute-button:hover{opacity:1; background: #333;}
+        #restart-button{
+            position: fixed;
+            top: 65px;
+            left: 10px;
+            background: #eee8e8;
+            color: rgb(0,0,0);
+            border: 1px solid #444;
+            padding: 4px 10px;
+            font-family: monospace;
+            font-size: 11px;
+            cursor: pointer;
+            border-radius: 3px;
+            opacity: 0.75;
+            transition: opacity 0.15s;
+            z-index: 999;
+        }
+        #restart-button:hover{opacity:1; background: #333; color: #fff;}
+        /*speed canvas bottom right*/
+        #speed-buttons{
+            position: absolute;
+            top: 65px;
+            right: 240px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        .speed-btn{
+            background: #97f3e0;
+            color: #666;
+            border: 1px solid #2a2a2a;
+            padding: 3px 7px;
+            font-family: monospace;
+            font-size: 10px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: color 0.1s, border-color 0.1s;
+        }
+        .speed-btn:hover {color: #ccc; border-color: rgb(155, 237, 226);}
+        .speed-btn.active{color: rgb(0, 0, 0); border-color: #dc3545;}
+        #dragging-translucent{
+            position: fixed;
+            pointer-events: none;
+            display: none;
+            z-index: 9999;
+            opacity: 0.5;
+        }
+        #help-overlay{
+            position: absolute;
+            top:0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            background-image: url('Untitled (3).png');
+            background-repeat: no-repeat;
+            background-size: contain;
+            transition: opacity 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="shape-box">
+        <span>drag -></span>
+        <!--Create shapes for shape-box-item shapes-->
+        <div class="shape-box-item" data-type="square" title="square">
+            <svg width="30" height="30">
+                <rect x="2" y="2" width="26" height="26" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">square</span>
+        </div>
+        <div class="shape-box-item" data-type="triangle" title="triangle">
+            <svg width="30" height="30">
+                <polygon points="15,2 28,28 2,28" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">triangle</span>
+        </div>
+        <div class="shape-box-item" data-type="circle" title="circle">
+            <svg width="30" height="30">
+                <circle cx="15" cy="15" r="13" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">circle</span>
+        </div>
+        <div class="shape-box-item" data-type="arptriangle" title="arptriangle">
+            <svg width="30" height="30">
+                <polygon points="2, 28 28,2 28,28" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">arptriangle</span>
+        </div>
+        <div class="shape-box-item" data-type="diamond" title="diamond">
+            <svg width="30" height="30">
+                <polygon points="15, 2 28,15 15,28 2,15" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">diamond</span>
+        </div>
+        <div class="shape-box-item" data-type="sawtooth" title="sawtooth">
+            <svg width="30" height="30">
+                <polygon points="2, 28 12,2 12,28" fill="rgb(255,255,255)"/>
+                <polygon points="12, 28 22,2 22,28" fill="rgb(255,255,255)"/>
+                <polygon points="22, 28 30,2 30,28" fill="rgb(255,255,255)"/>
+            </svg>
+            <span class="shape-hoverbox">sawtooth</span>
+        </div>
+        <div class="shape-box-item" data-type="voice" title="voice">
+            <svg width="30" height="30">
+                <text x="2" y="20" fill="rgb(255,255,255)" font-family="monospace" font-size="12">text</text>
+            </svg>
+            <span class="shape-hoverbox">voice</span>
+        </div>
+        <div class="shape-box-item" data-type="piano" title="piano">
+            <svg width="30" height="30">
+                <rect x="0" y="0" width="30" height="30" fill="rgb(255,255,255)"/>
+                <rect x="6" y="0" width="7" height="12" fill="#111"/>
+                <rect x="18" y="0" width="7" height="12" fill="#111"/>
+            </svg>
+            <span class="shape-hoverbox">piano</span>
+        </div>
+        <div class="shape-box-item" data-type="violin" title="violin">
+            <svg width="30" height="30">
+                <rect x="0" y="0" width="30" height="30" fill="rgb(255,255,255)"/>
+                <line x1="30" y1="0" x2="0" y2="30" stroke="#111" stroke-width="2"/>
+                <line x1="20" y1="0" x2="-10" y2="30" stroke="#111" stroke-width="2"/>
+                <line x1="40" y1="0" x2="10" y2="30" stroke="#111" stroke-width="2"/>
+            </svg>
+            <span class="shape-hoverbox">violin</span>
+        </div>
+        <div class="shape-box-item" data-type="flute" title="flute">
+            <svg width="30" height="30">
+                <rect x="0" y="0" width="30" height="30" fill="rgb(255,255,255)"/>
+                <circle cx="7" cy="8" r="4" fill="#111"/>
+                <circle cx="15" cy="8" r="4" fill="#111"/>
+                <circle cx="23" cy="8" r="4" fill="#111"/>
+            </svg>
+            <span class="shape-hoverbox">flute</span>
+        </div>
+        <!--effects for shape-box-item right side-->
+        <div style="margin-left: auto; display:flex; align-items:center; gap:16px; flex-shrink:0; overflow:visible;">
+            <span style="color:#888; font-family:monospace; font-size:10px;">patches -></span>
+            <div class="shape-box-item" data-type="patch-reverb" title="">
+                <svg width="30" height="30">
+                    <rect x="9" y="9" width="12" height="12" fill="white"/>
+                    <rect x="2" y="2" width="26" height="26" fill="none" stroke="white" stroke-width="1.5"/>
+                </svg>
+              <span class="shape-hoverbox">.reverb</span>
+            </div>
+            <div class="shape-box-item" data-type="patch-vibrato" title="">
+                <svg width="30" height="30">
+                    <path d="M2 8  A4.33 3 0 0 1 6.33 8  A4.33 3 0 0 0 10.67 8  A4.33 3 0 0 1 15 8  A4.33 3 0 0 0 19.33 8  A4.33 3 0 0 1 23.67 8  A4.33 3 0 0 0 28 8" stroke="white" fill="none" stroke-width="1.5"/>
+                    <path d="M2 15 A4.33 3 0 0 1 6.33 15 A4.33 3 0 0 0 10.67 15 A4.33 3 0 0 1 15 15 A4.33 3 0 0 0 19.33 15 A4.33 3 0 0 1 23.67 15 A4.33 3 0 0 0 28 15" stroke="white" fill="none" stroke-width="1.5"/>
+                    <path d="M2 22 A4.33 3 0 0 1 6.33 22 A4.33 3 0 0 0 10.67 22 A4.33 3 0 0 1 15 22 A4.33 3 0 0 0 19.33 22 A4.33 3 0 0 1 23.67 22 A4.33 3 0 0 0 28 22" stroke="white" fill="none" stroke-width="1.5"/>
+                  </svg>
+                <span class="shape-hoverbox">.vibrato</span>
+            </div>
+            <div class="shape-box-item" data-type="patch-distort" title="">
+                <svg width="30" height="30">
+                    <rect x="2"  y="2"  width="5" height="5" fill="white"/>
+                    <rect x="12" y="2"  width="5" height="5" fill="white"/>
+                    <rect x="22" y="2"  width="5" height="5" fill="white"/>
+                  
+                    <rect x="7"  y="7"  width="5" height="5" fill="white"/>
+                    <rect x="17" y="7"  width="5" height="5" fill="white"/>
+                  
+                    <rect x="2"  y="12" width="5" height="5" fill="white"/>
+                    <rect x="12" y="12" width="5" height="5" fill="white"/>
+                    <rect x="22" y="12" width="5" height="5" fill="white"/>
+                  
+                    <rect x="7"  y="17" width="5" height="5" fill="white"/>
+                    <rect x="17" y="17" width="5" height="5" fill="white"/>
+                  
+                    <rect x="2"  y="22" width="5" height="5" fill="white"/>
+                    <rect x="12" y="22" width="5" height="5" fill="white"/>
+                    <rect x="22" y="22" width="5" height="5" fill="white"/>
+                  </svg>
+                <span class="shape-hoverbox">.distort</span>
+            </div>
+            <div class="shape-box-item" data-type="patch-reverse" title="">
+                <svg width="30" height="30">
+                    <polygon points="16,4 4,15 16,26" fill="white"/>
+                    <polygon points="26,4 14,15 26,26" fill="white"/>
+                </svg>
+                <span class="shape-hoverbox">.reverse</span>
+            </div>
+            <div class="shape-box-item" data-type="patch-chorus" title="">
+                <svg width="30" height="30">
+                    <rect x="0" y="10" width="7" height="10" fill="white"/>
+                    <rect x="7" y="5" width="16" height="20" fill="white"/>
+                    <rect x="23" y="10" width="7" height="10" fill="white"/>
+                </svg>
+                <span class="shape-hoverbox">.chorus</span>
+            </div>
+          </div>
+    </div>
+    
+    <div id="sketch">
+        <div id="help-overlay"><img src="Untitled (3).png" style="margin-top: 675px; width: 1300px;"></div>
+    </div>
+    <textarea id="code-editor"
+        style="width:100%; font-family:monospace; font-size:13px;"
+        placeholder="square 250 150 //C5"></textarea>
+        <div id="speed-buttons">
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn" data-speed="0.75">0.75x</button>
+            <button class="speed-btn" data-speed="1">1.0x</button>
+            <button class="speed-btn" data-speed="1.25">1.25x</button>
+            <button class="speed-btn" data-speed="1.5">1.50x</button>
+        </div>
+    <button id="copy-button">copy</button>
+    <button id="delete-button">delete</button>
+    <button id="pause-play">pause</button>
+    <button id="save-button">save</button>
+    <button id="load-button">load</button>
+    <button id="new-page-button">+ page</button>
+    <button id="mute-button">mute</button>
+    <button id="restart-button">restart</button>
+    <input type="file" id="file-input" accept=".txt" style="display:none">
+    <div id="dragging-translucent"></div>
+    <script>
+        let shapes = []; //array of shapes on canvas
+        let draggingIndex = -1; //index of shape being dragged
+        let draggingOffsetX = 0;
+        let draggingOffsetY = 0;
+        let stretchingOffsetX = 0;
+        let stretchStartWidth = 0;
+        let stretchStartMouseX = 0;
+        let pressedIndex = -1; //index of clicked shape
+
+        //tonejs synth instances for each shape
+        let squareSynth, triangleSynth, sineSynth, sawtoothSynth, diamondSynth;
+        let pianoSample, violinSample, fluteSample;
+        let sampleReady = false;
+
+        let scanline = 0; //scanline x val
+        const SCAN_SPEED = 3; //scanline speed
+        let speedMultiplier = 1; //multiplier applied by speed buttons
+        
+        //notes greater y = higher pitch (in array order highest to lowest)
+        // = ['C5', 'B4', 'Bb4', 'A4', 'Ab4', 'G4', 'Gb4', 'F4', 'E4', 'Eb4', 'D4', 'Db4', 'C4', 'B3', 'Bb3', 'A3', 'Ab3', 'G3', 'Gb3', 'F3', 'E3', 'Eb3', 'D3', 'Db3', 'C3']
+        const notes = ['C7','B6','Bb6','A6','Ab6','G6','Gb6','F6','E6','Eb6','D6','Db6','C6','B5','Bb5','A5','Ab5','G5','Gb5','F5','E5','Eb5','D5','Db5','C5', 'B4', 'Bb4', 'A4', 'Ab4', 'G4', 'Gb4', 'F4', 'E4', 'Eb4', 'D4', 'Db4', 'C4', 'B3', 'Bb3', 'A3', 'Ab3', 'G3', 'Gb3', 'F3', 'E3', 'Eb3', 'D3', 'Db3', 'C3', 'B2', 'Bb2', 'A2', 'Ab2', 'G2', 'Gb2', 'F2', 'E2', 'Eb2', 'D2', 'Db2', 'C2']
+        let audioStarted = false;
+        let suppressEditorUpdate = false;
+
+        const editor = document.getElementById('code-editor');
+
+        let arpSynth; //arpeggio triangle synth
+
+        //translucent shape that follows cursor when dragging
+        const translucent = document.getElementById('dragging-translucent');
+        let dragging = null; //shape being dragged
+
+        //translucent shapes when draggedd
+        const translucentSVGs = {
+            square: `<svg width="40" height="40"><rect x="0" y="0" width="40" height="40" fill="rgb(255,0,0)"/></svg>`,
+            triangle: `<svg width="40" height="40"><polygon points="20,0 40,40 0,40" fill="rgb(255,0,0)"/></svg>`,
+            circle: `<svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="rgb(255,0,0)"/></svg>`,
+            arptriangle: `<svg width="40" height="40"><polygon points="0,40 40,0 40,40"  fill="rgb(255,0,0)"/></svg>`,
+            diamond: `<svg width="40" height="40"><polygon points="20,0 40,20 20,40 0,20"  fill="rgb(255,0,0)"/></svg>`,
+            sawtooth: `<svg width="40" height="40"><polygon points="0,40 13,0 13,40"  fill="rgb(255,0,0)"/><polygon points="13,40 26,0 26,40"  fill="rgb(255,0,0)"/><polygon points="26,40 40,0 40,40"  fill="rgb(255,0,0)"/></svg>`,
+            voice: `<svg width="40" height="20"><text x="2" y="15" fill="rgb(255,0,0)" font-family="monospace" font-size="12">text</text></svg>`,
+            'patch-distort': `<svg width="30" height="30">
+                    <rect x="2"  y="2"  width="5" height="5" fill="teal"/>
+                    <rect x="12" y="2"  width="5" height="5" fill="teal"/>
+                    <rect x="22" y="2"  width="5" height="5" fill="teal"/>
+                  
+                    <rect x="7"  y="7"  width="5" height="5" fill="teal"/>
+                    <rect x="17" y="7"  width="5" height="5" fill="teal"/>
+                  
+                    <rect x="2"  y="12" width="5" height="5" fill="teal"/>
+                    <rect x="12" y="12" width="5" height="5" fill="teal"/>
+                    <rect x="22" y="12" width="5" height="5" fill="teal"/>
+                  
+                    <rect x="7"  y="17" width="5" height="5" fill="teal"/>
+                    <rect x="17" y="17" width="5" height="5" fill="teal"/>
+                  
+                    <rect x="2"  y="22" width="5" height="5" fill="teal"/>
+                    <rect x="12" y="22" width="5" height="5" fill="teal"/>
+                    <rect x="22" y="22" width="5" height="5" fill="teal"/>
+                  </svg>`,
+            'patch-vibrato': `<svg width="30" height="30">
+                    <path d="M2 8  A4.33 3 0 0 1 6.33 8  A4.33 3 0 0 0 10.67 8  A4.33 3 0 0 1 15 8  A4.33 3 0 0 0 19.33 8  A4.33 3 0 0 1 23.67 8  A4.33 3 0 0 0 28 8" stroke="teal" fill="none" stroke-width="1.5"/>
+                    <path d="M2 15 A4.33 3 0 0 1 6.33 15 A4.33 3 0 0 0 10.67 15 A4.33 3 0 0 1 15 15 A4.33 3 0 0 0 19.33 15 A4.33 3 0 0 1 23.67 15 A4.33 3 0 0 0 28 15" stroke="teal" fill="none" stroke-width="1.5"/>
+                    <path d="M2 22 A4.33 3 0 0 1 6.33 22 A4.33 3 0 0 0 10.67 22 A4.33 3 0 0 1 15 22 A4.33 3 0 0 0 19.33 22 A4.33 3 0 0 1 23.67 22 A4.33 3 0 0 0 28 22" stroke="teal" fill="none" stroke-width="1.5"/>
+                  </svg>`,
+            'patch-reverb': `<svg width="30" height="30">
+                    <rect x="9" y="9" width="12" height="12" fill="teal"/>
+                    <rect x="2" y="2" width="26" height="26" fill="none" stroke="teal" stroke-width="1.5"/>
+                    </svg>`,
+                    'patch-reverse': `<svg width="30" height="30"><polygon points="16,4 4,15 16,26" fill="teal"/><polygon points="26,4 14,15 26,26" fill="teal"/></svg>`,
+                    'patch-chorus': `<svg width="30" height="30"><rect x="0" y="10" width="7" height="10" fill="teal"/><rect x="7" y="5" width="16" height="20" fill="teal"/><rect x="23" y="10" width="7" height="10" fill="teal"/></svg>`,
+            piano: `<svg width="40" height="40">
+                    <rect x="0" y="0" width="40" height="40" fill="rgb(252, 166, 219)"/>
+                    <rect x="8" y="0" width="9" height="16" fill="#111"/>
+                    <rect x="24" y="0" width="9" height="16" fill="#111"/>
+                </svg>`,
+            violin: `<svg width="40" height="40">
+                        <rect x="0" y="0" width="40" height="40" fill="rgb(252, 166, 219)"/>
+                        <line x1="40" y1="0" x2="0" y2="40" stroke="#111" stroke-width="2.5"/>
+                        <line x1="27" y1="0" x2="-13" y2="40" stroke="#111" stroke-width="2.5"/>
+                        <line x1="53" y1="0" x2="13" y2="40" stroke="#111" stroke-width="2.5"/>
+                    </svg>`,
+            flute: `<svg width="40" height="40">
+                <rect x="0" y="0" width="40" height="40" fill="rgb(252, 166, 219)"/>
+                <circle cx="9" cy="10" r="5" fill="#111"/>
+                <circle cx="20" cy="10" r="5" fill="#111"/>
+                <circle cx="31" cy="10" r="5" fill="#111"/>
+            </svg>`
+        };
+
+        //shapes currently being played
+        let activeShapes = new Set();   
+
+        let stretchIndex = -1; //index of shape being resized
+        const STRETCH = 10; //tolerance for resizing
+
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                setSpeed(parseFloat(btn.dataset.speed), true);
+            });
+        });
+
+        const GRID = 50; //grid size for snapping
+
+        let voiceIndex = -1; //index of voice shape being typed
+
+        let selectedShape = -1; // index of shape selected
+
+        let totalPages = 1;
+        let pageHeight;
+
+        let scrollX = 0;
+        let scrollY = 0;
+        
+        let muted = false;
+
+        let insideDragIndex = -1;
+
+        let gridVisible = true;
+
+        let rHold = false;
+        let qHold = false;
+        let multiSelect = new Set();
+        let draggingScanline = false;
+
+        let zoomLevel = 1.0;
+
+        let playing = true;
+        let canvasFocus = false;
+        function applyZoom(){
+            const c = document.querySelector('#sketch canvas');
+            if (!c) return;
+            c.style.transformOrigin = 'top left';
+            c.style.transform = `scale(${zoomLevel})`;
+            c.style.marginBottom = `-${c.offsetHeight * (1-zoomLevel)}px`;
+            const sketch = document.getElementById('sketch');
+            sketch.style.width = '100%';
+            c.style.width = c.offsetWidth + 'px';
+        }
+        //snap value to nearest grid column (32 squares across)
+        function snap(v) {return Math.round(v/(windowWidth/32)) * (windowWidth/32);}
+
+        function setSpeed(value, writeToEditor){
+            speedMultiplier = value;
+            document.querySelectorAll('.speed-btn').forEach(b =>{
+                b.classList.toggle('active', parseFloat(b.dataset.speed) === value);
+            });
+            if (writeToEditor){
+                suppressEditorUpdate = true;
+                let lines = editor.value.split('\n').filter(l => !/^speed\s/i.test(l.trim()));
+                if (value !== 1) lines.unshift(`speed ${value}x`);
+                editor.value = lines.join('\n');
+                suppressEditorUpdate = false;
+            }
+        }
+        function parseSpeedFromEditor(){
+            const match = editor.value.match(/^speed\s+([\d.]+)x/im);
+            setSpeed(match ? parseFloat(match[1]): 1, false);
+        }
+
+        document.querySelectorAll('.shape-box-item').forEach(item =>{
+            item.addEventListener('mousedown', e =>{
+                dragging = item.dataset.type;
+                translucent.innerHTML = translucentSVGs[dragging];
+                translucent.style.display = 'block';
+                translucent.style.left = (e.clientX - 20) + 'px';
+                translucent.style.top = (e.clientY - 20) + 'px';
+                e.preventDefault();
+            })
+        })
+        document.addEventListener('mousemove', e => {
+            if (!dragging) return;
+            translucent.style.left = (e.clientX - 20) + 'px';
+            translucent.style.top  = (e.clientY - 20) + 'px';
+        });
+
+        document.addEventListener('mouseup', async e => {
+            if (!dragging) return;
+            /*await Tone.start();
+            initSamplers();
+            const sketchEl = document.getElementById('sketch');*/
+            try { await Tone.start(); } catch(err) { console.warn('audio start:', err); }
+            try { initSamplers(); } catch(err) { console.warn('sampler init:', err); }
+            const sketchEl = document.getElementById('sketch');
+            const rect = sketchEl.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top  && e.clientY <= rect.bottom) {
+
+                const cx = (e.clientX - rect.left) / zoomLevel + scrollX;
+                //const cx = e.clientX - rect.left + scrollX;
+                const cy = (e.clientY - rect.top + document.getElementById('sketch').scrollTop) / zoomLevel;
+                //= e.clientY - rect.top + document.getElementById('sketch').scrollTop;
+                const fx = e.shiftKey ? snap(cx):cx;
+                const fy = e.shiftKey ? snap(cy):cy;
+                //const fx = keyIsDown(SHIFT) ? snap(cx):cx;
+                //const fy = keyIsDown(SHIFT) ? snap(cy):cy;
+                if (dragging.startsWith('patch-')){
+                    const effectName=dragging.replace('patch-', '');
+                    for (let i = shapes.length -1; i >=0; i--){
+                        const s = shapes[i];
+                        const sx = resolveValue(s.x);
+                        const sy = resolveValue(s.y);
+                        const sw = resolveValue(s.w);
+                        const hit = cx > sx && cx < sx +sw && cy > sy - 50 && cy < sy + 100;
+                        if (hit){
+                            if (!s.effects.includes(effectName)) s.effects.push(effectName);
+                            syncEditorFromShapes();
+                            break;
+
+                        }
+                    }
+                } else{
+                const newShape = {
+                    type: dragging, 
+                    x: {value:fx, animated:false},
+                    y: {value:fy, animated: false},
+                    w: {value:100, animated: false},
+                    vol: {value:100, animated:false},
+                    insideX:0.5,
+                    insideY:0.5,
+                    span: dragging === 'arptriangle' ? 5:1,
+                    effects: [], 
+                    _lastFxKey: null};
+                if (dragging ===  'voice'){
+                    newShape.label = '';
+                    shapes.push(newShape);
+                    voiceIndex = shapes.length - 1;
+                } else{
+                    shapes.push(newShape);
+                }
+                syncEditorFromShapes();
+            }}
+
+            translucent.style.display = 'none';
+            dragging = null;
+        });
+
+        function scaledMouse(){
+            return {
+                mx: (mouseX + scrollX)/zoomLevel,
+                my: mouseY/zoomLevel
+            }
+        }
+
+        function initSamplers(){
     if (pianoSample) return;
     let loadedCount = 0;
     function checkReady(){
@@ -49,3 +776,1670 @@ function initSamplers(){
         onload: checkReady
     }).toDestination();
 }
+    /*function initSamplers(){
+    if (pianoSample) return;
+    pianoSample = new Tone.Sampler({
+        urls: {'A0':'A0.mp3','C1':'C1.mp3','Ds1':'Ds1.mp3','Fs1':'Fs1.mp3','A1':'A1.mp3','C2':'C2.mp3','Ds2':'Ds2.mp3','Fs2':'Fs2.mp3','A2':'A2.mp3','C3':'C3.mp3','Ds3':'Ds3.mp3','Fs3':'Fs3.mp3','A3':'A3.mp3','C4':'C4.mp3','Ds4':'Ds4.mp3','Fs4':'Fs4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+        baseUrl: 'https://tonejs.github.io/audio/salamander/',
+    }).toDestination();
+    violinSample = new Tone.Sampler({
+        urls: {'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+        baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/violin-mp3/',
+    }).toDestination();
+    fluteSample = new Tone.Sampler({
+        urls: {'C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+        baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/flute-mp3/',
+    }).toDestination();
+    Tone.loaded().then(() => {
+        sampleReady = true;
+        document.getElementById('restart-button').textContent = 'restart ✓';
+    });
+}*/
+
+        /*function initSamplers(){
+            if (pianoSample) return;
+            let loadedCount = 0;
+            function checkReady(){ loadedCount++; if (loadedCount >= 3){ sampleReady = true; document.getElementById('restart-button').textContent = 'restart ✓'; }}
+            pianoSample = new Tone.Sampler({
+                urls: {'A0':'A0.mp3','C1':'C1.mp3','Ds1':'Ds1.mp3','Fs1':'Fs1.mp3','A1':'A1.mp3','C2':'C2.mp3','Ds2':'Ds2.mp3','Fs2':'Fs2.mp3','A2':'A2.mp3','C3':'C3.mp3','Ds3':'Ds3.mp3','Fs3':'Fs3.mp3','A3':'A3.mp3','C4':'C4.mp3','Ds4':'Ds4.mp3','Fs4':'Fs4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+                baseUrl: 'https://tonejs.github.io/audio/salamander/',
+                onload: checkReady
+            }).toDestination();
+            violinSample = new Tone.Sampler({
+                urls: {'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+                baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/violin-mp3/',
+                //baseUrl: 'https://cdn.jsdelivr.net/npm/tonejs-instrument-violin-mp3@1.1.1/',
+                onload: checkReady
+            }).toDestination();
+            fluteSample = new Tone.Sampler({
+                urls: {'C4':'C4.mp3','E4':'E4.mp3','A4':'A4.mp3','C5':'C5.mp3'},
+                baseUrl: 'https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/flute-mp3/',
+                //baseUrl: 'https://cdn.jsdelivr.net/npm/tonejs-instrument-flute-mp3@1.1.2/',
+                onload: checkReady
+            }).toDestination();
+        }*/
+
+        function setup() {
+            //let canvas = createCanvas(windowWidth, windowHeight - 120 - 50);
+            //pageHeight = windowHeight - document.getElementById('shape-box').offsetHeight-160;
+            pageHeight = windowHeight * 2.5;
+            // = document.getElementById('sketch').offsetHeight;
+            let canvas = createCanvas(windowWidth, pageHeight);
+            //let canvas = createCanvas(windowWidth * totalPages, windowHeight - 120 - 50);
+            canvas.parent('sketch');
+            document.getElementById('sketch').scrollTop = (windowHeight * 2.5)/ 2 - (windowHeight -250)/2;
+
+            canvas.elt.setAttribute('tabindex', '0');
+            canvas.elt.addEventListener('mousedown', () => {canvasFocus=true;});
+            canvas.elt.addEventListener('mousedown', () => {canvasFocus = true});
+
+            //synths for different shapes
+            //squareSynth = new Tone.Synth().toDestination();
+            //triangleSynth = new Tone.MetalSynth().toDestination();
+            //sineSynth = new Tone.Synth({oscillator: {type:'sine'}}).toDestination();
+            //sawtoothSynth = new Tone.Synth({oscillator: {type:'sawtooth'}}).toDestination();
+            //arpSynth = new Tone.Synth({oscillator: {type: 'triangle'}}).toDestination();
+            squareSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+            triangleSynth = new Tone.PolySynth(Tone.MetalSynth).toDestination();
+            //triangleSynth = new Tone.PolySynth(Tone.Synth, {oscillator:{type: 'triangle'}}).toDestination();
+            sineSynth = new Tone.PolySynth(Tone.Synth, {oscillator: {type:'sine'}}).toDestination();
+            sawtoothSynth = new Tone.PolySynth(Tone.Synth, {oscillator: {type:'sawtooth'}}).toDestination();
+            arpSynth = new Tone.PolySynth(Tone.Synth, {oscillator: {type: 'triangle'}}).toDestination();
+            //diamondSynth = new Tone.PolySynth(Tone.Synth, { oscillator:{type:'pwm'}}).toDestination();
+            diamondSynth = new Tone.PolySynth(Tone.FMSynth).toDestination();
+            //diamondSynth = new Tone.PolySynth(Tone.MetalSynth).toDestination();
+            
+            /*const BASE = 'samples/';
+            //const BASE = 'https://cdn.jsdelivr.net/gh/nbrosowsky/tonejs-instruments@master/samples/';
+            //const BASE = 'https://raw.githubusercontent.com/nbrosowsky/tonejs-instruments/master/samples/';
+            let loadedCount = 0;
+            function checkReady(){loadedCount++; if (loadedCount >=3) sampleReady=true;}
+            pianoSample = new Tone.Sampler({
+                urls: { 'A0':'A0.mp3','C1':'C1.mp3','Ds1':'Ds1.mp3','Fs1':'Fs1.mp3','A1':'A1.mp3','C2':'C2.mp3','Ds2':'Ds2.mp3','Fs2':'Fs2.mp3','A2':'A2.mp3','C3':'C3.mp3','Ds3':'Ds3.mp3','Fs3':'Fs3.mp3','A3':'A3.mp3','C4':'C4.mp3','Ds4':'Ds4.mp3','Fs4':'Fs4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                //urls: { 'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                //urls: { 'A0':'A0.mp3','C1':'C1.mp3','Ds1':'Ds1.mp3','Fs1':'Fs1.mp3','A1':'A1.mp3','C2':'C2.mp3','Ds2':'Ds2.mp3','Fs2':'Fs2.mp3','A2':'A2.mp3','C3':'C3.mp3','Ds3':'Ds3.mp3','Fs3':'Fs3.mp3','A3':'A3.mp3','C4':'C4.mp3','Ds4':'Ds4.mp3','Fs4':'Fs4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+               // baseUrl: BASE + 'piano/',
+               baseUrl: 'https://tonejs.github.io/audio/salamander/',
+              // baseUrl: 'https://cdn.jsdelivr.net/npm/tonejs-instrument-piano-mp3@1/',
+                onload: checkReady
+            }).toDestination();
+            violinSample = new Tone.Sampler({
+                urls: { 'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                //urls: { 'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                //baseUrl: BASE + 'violin/',
+                baseUrl: 'https://cdn.jsdelivr.net/npm/tonejs-instrument-violin-mp3@1.1.1/',
+                onload: checkReady
+            }).toDestination();
+            fluteSample = new Tone.Sampler({
+                urls: { 'C4':'C4.mp3','E4':'E4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                //urls: { 'A3':'A3.mp3','C4':'C4.mp3','E4':'E4.mp3','G4':'G4.mp3','A4':'A4.mp3','C5':'C5.mp3' },
+                baseUrl: 'https://cdn.jsdelivr.net/npm/tonejs-instrument-flute-mp3@1.1.2/',
+                //baseUrl: BASE + 'flute/',
+                onload: checkReady
+            }).toDestination();
+         */
+            
+
+            function createEffects(effects){
+                return effects.map(effect =>{
+                    if (effect === 'vibrato') return new Tone.Vibrato({ frequency: 5, depth: 0.5}).toDestination();
+                    if (effect === 'distortion') return new Tone.Distortion(0.8).toDestination();
+                    if (effect === 'reverb') return new Tone.Reverb({decay: 3, wet: 0.7}).toDestination();
+                    return null;
+                }).filter(Boolean);
+            }
+            //try { initSamplers(); } catch(err) { console.warn('sampler init:', err); }
+            //initSamplers();
+        }
+        
+        function drawGradient(x, y, w, h){
+            let gradient = drawingContext.createLinearGradient(x + w * 0.5, 0, x + w, 0);
+            gradient.addColorStop(0, 'rgba(255,255,255,0)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0.6)');
+            drawingContext.fillStyle = gradient;
+            drawingContext.fillRect(x + w * 0.5, y, w * 0.5, h);
+        }
+
+        function drawGradientReverse(x, y, w, h){
+            let gradient = drawingContext.createLinearGradient(x, 0, x+w*0.5,0);
+            gradient.addColorStop(0, 'rgba(255,255,255,0.6)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            drawingContext.fillStyle = gradient;
+            drawingContext.fillRect(x, y, w*0.5,h);
+        }
+        function noteHeight(){return height/notes.length;}
+        function shapeHeight(s){
+            if (s.type === 'arptriangle'){
+                return (s.span || 1) * noteHeight();
+            
+            }
+            return 100;
+        }
+        function draw() {
+            background(255);//white canvas
+            if (gridVisible){
+            stroke(200); 
+            strokeWeight(0.5);//grid lines
+            const gridSize = windowWidth/32;//32 squared grid across
+            for (let x = 0; x < width; x += gridSize) line(x, 0, x, height);
+            for (let y = 0; y < height; y += gridSize) line (0, y, width, y);
+            }
+            //page divider lines
+            for (let p = 1; p < totalPages; p++){
+                stroke(180,180, 255);
+                strokeWeight(2);
+                line(p * windowWidth, 0, p* windowWidth, height);
+            }
+            //page numbers
+            for (let p = 0; p < totalPages; p++){
+                fill(180, 180, 255);
+                noStroke();
+                textSize(30);
+                textAlign(RIGHT);
+                text(p+1,(p+1)*windowWidth-8, height-60);
+            }
+            //notes left side
+            const sketchScroll = document.getElementById('sketch').scrollLeft;
+            for (let i = 0; i < notes.length; i++){
+                const y = (i/notes.length) * height + (height/notes.length/2);
+                const activeIdx = draggingIndex !== -1 ? draggingIndex: (selectedShape !== -1 ? selectedShape: -1);
+                const highlightNote = activeIdx !== -1
+                ? Math.min(Math.floor(((resolveValue(shapes[activeIdx].y) + shapeHeight(shapes[activeIdx]) / 2) / height) * notes.length), notes.length - 1)
+                : -1;
+            if ( i === highlightNote){
+                fill(0, 0, 255);
+                textSize(11);
+                noStroke();
+                rect(sketchScroll, y - 7, 22, 13);
+                fill(255);
+            }else{
+                fill(180);
+            }
+                noStroke();
+                textSize(10);
+                textAlign(LEFT);
+                text(notes[i], sketchScroll +4, y);
+            
+            }
+            noStroke();
+            
+            //scanline motion
+            let previous = scanline;
+            if (playing == true) {scanline += SCAN_SPEED * speedMultiplier};
+            
+            if (scanline > width) scanline = 0;
+            if (scanline < previous){
+                activeShapes.forEach(i => triggerRelease(shapes[i]));
+                activeShapes.clear();
+            }
+            noStroke();
+            
+            //draw each shapes
+            for (let si = 0; si < shapes.length; si++){
+                //Square
+                let s = shapes[si]
+                const sx = resolveValue(s.x);
+                const sy = resolveValue(s.y);
+                const sw = resolveValue(s.w);
+                const alpha = shapeAlpha(s);
+                const a255 = Math.round(alpha * 255);
+            if (s.type === 'square'){
+            fill(255, 0, 0, a255);
+            rect(sx, sy, sw, 100);
+            if (alpha > 0) {
+                if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, 100);
+                else drawGradient(sx, sy, sw, 100);
+
+            }
+            }
+            //Triangle
+            else if (s.type === 'triangle'){
+            fill(0, 255, 0, a255);
+            triangle(sx, sy +100, sx - sw/2, sy, sx + sw/2, sy);
+            drawingContext.save();
+            drawingContext.beginPath();
+            drawingContext.moveTo(sx, sy + 100);
+            drawingContext.lineTo(sx - sw/2, sy);
+            drawingContext.lineTo(sx + sw/2, sy);
+            drawingContext.closePath();
+            drawingContext.clip();
+            if (alpha > 0){
+                if (s.effects.includes('reverse')) drawGradientReverse (sx - sw/2, sy, sw, 100);
+                else drawGradient(sx - sw/2, sy, sw, 100);
+            
+            }
+            drawingContext.restore();
+            }
+            //Circle (Sine)
+            else if (s.type === 'circle'){
+                fill(0, 0, 255, a255);
+                ellipse(sx, sy, sw, 100);
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.ellipse(sx, sy, sw/2, 50, 0, 0, Math.PI *2);
+                drawingContext.clip();
+                if (alpha > 0) {
+                if (s.effects.includes('reverse')) drawGradientReverse (sx - sw/2, sy - 50, sw, 100);   
+                else drawGradient(sx - sw/2, sy - 50, sw, 100);
+                
+            }   drawingContext.restore();
+            }
+            //right angled triangle(arpeggiator)
+            else if (s.type === 'arptriangle'){
+                const sh = shapeHeight(s);
+                fill(255, 165, 0, a255);
+                triangle(sx, sy + sh, sx + sw, sy, sx + sw, sy +sh);
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.moveTo(sx, sy + sh);
+                drawingContext.lineTo(sx + sw, sy);
+                drawingContext.lineTo(sx + sw, sy + sh);
+                drawingContext.closePath();
+                drawingContext.clip();
+                if (alpha > 0){
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, sh);   
+                else drawGradient(sx, sy, sw, sh);
+                }
+                drawingContext.restore();
+                const nh = noteHeight();
+                stroke(255, 255, 255, a255 * 0.7);
+                strokeWeight(1.5);
+                for (let n = 1; n < (s.span || 1); n++){
+                    const ny = sy + sh - n * nh;
+                    const frac = (s.span -n) / (s.span || 1);
+                    const lineLeft = sx + sw * (1-frac);
+                    line(lineLeft, ny, sx + sw, ny);
+                }
+                noStroke();
+            }
+            //diamond
+            else if (s.type === 'diamond'){
+                fill(160, 250, 239, a255);
+                quad(sx, sy, sx+sw/2, sy - 50, sx+sw, sy, sx + sw/2, sy+50);
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.moveTo(sx, sy);
+                drawingContext.moveTo(sx, sy);
+                drawingContext.lineTo(sx + sw/2, sy - 50);
+                drawingContext.lineTo(sx + sw, sy);
+                drawingContext.lineTo(sx + sw/2, sy + 50);
+                drawingContext.closePath();
+                drawingContext.clip();
+                if (alpha > 0){
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy-50, sw, 100);   
+                else drawGradient(sx, sy-50, sw, 100);
+                }
+                drawingContext.restore();
+            }
+            //sawtooth
+            else if (s.type === 'sawtooth'){
+                fill(180, 100, 255, a255);
+                const tw = sw/3;
+                triangle(sx, sy + 100, sx +tw, sy, sx + tw, sy + 100);
+                triangle(sx + tw, sy + 100, sx +tw * 2, sy, sx + tw * 2, sy + 100);
+                triangle(sx + tw * 2, sy + 100, sx +tw * 3, sy, sx + tw * 3, sy + 100);
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.moveTo(sx, sy + 100);
+                drawingContext.lineTo(sx + tw, sy);
+                drawingContext.lineTo(sx+ tw, sy + 100);
+                drawingContext.moveTo(sx + tw, sy + 100);
+                drawingContext.lineTo(sx + tw * 2, sy);
+                drawingContext.lineTo(sx+ tw * 2, sy + 100);
+                drawingContext.moveTo(sx + tw * 2, sy + 100);
+                drawingContext.lineTo(sx + tw * 3, sy);
+                drawingContext.lineTo(sx+ tw * 3, sy + 100);
+                drawingContext.closePath();
+                drawingContext.clip();
+                if (alpha > 0) {
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, 100);   
+                    else drawGradient(sx, sy, sw, 100);
+                }
+                drawingContext.restore();
+            }
+            //voice text-to-speech
+            else if (s.type === 'voice'){
+                fill(255, 0, 0, a255);
+                textSize(25);
+                textAlign(LEFT);
+                const isEditing = (voiceIndex === si);
+                const label = s.label || '';
+                const blink = isEditing ? (frameCount % 30 < 15 ? '|':''): '';
+                const displayText = isEditing ? label + blink : (label || 'text');
+                drawingContext.save();
+                drawingContext.fillStyle = `rgba(255, 0, 0, ${alpha})`;
+                drawingContext.font = '25px monospace';
+                const initialWidth = drawingContext.measureText(displayText).width;
+                const scaleX = initialWidth > 0 ? sw / initialWidth: 1;
+                drawingContext.translate(sx, sy + 55);
+                drawingContext.scale(scaleX, 1);
+                drawingContext.fillText(displayText, 0, 0);
+                drawingContext.restore();
+                //text(displayText, s.x + s.w/2, s.y + 55);
+            }
+            //piano
+            else if (s.type === 'piano'){
+                fill(255, 100, 180, a255);
+                rect(sx,sy,sw,100);
+                if (alpha>0){
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, 100);   
+                 else drawGradient(sx,sy,sw,100);
+                }
+                fill(17,17,17,a255);
+                rect(sx+sw*0.18,sy,sw*0.22,45);
+                rect(sx+sw*0.58,sy,sw*0.22,45);
+            }
+            //violin
+            else if (s.type === 'violin'){
+                fill(255, 100,180,a255);
+                rect(sx,sy,sw,100);
+                if(alpha > 0){
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, 100);   
+                 else drawGradient(sx,sy,sw,100);
+                }
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.rect(sx,sy,sw,100);
+                drawingContext.clip();
+                stroke(255,255,255,a255);
+                strokeWeight(2.5);
+                line(sx + sw, sy, sx, sy +100);
+                line(sx + sw*0.67, sy,sx-sw*0.33, sy+ 100);
+                line(sx + sw*1.33, sy, sx + sw*0.33, sy + 100);
+                noStroke();
+                drawingContext.restore();
+            }
+            //flute
+            else if (s.type === 'flute'){
+                fill(255, 100, 180, a255);
+                rect(sx, sy,sw,100);
+                if (alpha > 0) {
+                    if (s.effects.includes('reverse')) drawGradientReverse (sx, sy, sw, 100);   
+                    else drawGradient(sx, sy,sw,100);
+                }
+                fill(255,255,255,a255);
+                noStroke();
+                const r = sw * 0.08;
+                ellipse(sx + sw*0.2, sy + 20, r*2, r*2);
+                ellipse(sx + sw*0.5, sy + 20, r*2, r*2);
+                ellipse(sx + sw*0.8, sy + 20, r*2, r*2);
+            }
+            let dotCentreX = sx + sw/2;
+            let dotCentreY = sy + 50;
+            if (s.type === 'triangle'){dotCentreX=sx;dotCentreY = sy+66;}
+            if (s.type === 'circle'){dotCentreX=sx;dotCentreY = sy;}
+            if (s.type === 'arptriangle'){dotCentreX=sx + sw*0.66; dotCentreY = sy + shapeHeight(s)*0.66;}
+            //if (s.type === 'arptriangle'){dotCentreX=sx + sw*0.66;dotCentreY = sy+66;}
+            if (s.type === 'diamond'){dotCentreX=sx + sw/2;dotCentreY = sy;}
+            if (s.type === 'sawtooth'){dotCentreX=sx+sw/2;dotCentreY = sy+66;}
+            if (s.type === 'voice'){dotCentreX=sx+sw/2;dotCentreY = sy+55;}
+            const dotX = dotCentreX + (s.insideX -0.5) *sw;
+            const dotY = dotCentreY + (s.insideY - 0.5) *100;
+            fill(250,212,107,a255);
+            noStroke();
+            rect(dotX - 5, dotY-5, 10, 10)
+
+            //Pitch based on y postion
+            let noteIdx = Math.min(Math.floor(((sy + shapeHeight(s) / 2) / height) * notes.length), notes.length - 1);
+            //let noteIdx = Math.min(Math.floor((sy/height)* notes.length), notes.length - 1);
+            
+            if (si === selectedShape){
+                stroke(0, 255, 100);
+                strokeWeight(4);
+                noFill();
+                if (s.type === 'square'){
+                    rect(sx, sy, sw, 100);
+                }
+                else if (s.type === 'triangle'){
+                    triangle(sx, sy+100, sx - sw/2, sy, sx + sw/2, sy);
+                }
+                else if (s.type === 'circle'){
+                    ellipse(sx, sy, sw, 100);
+                }
+                /*else if (s.type === 'arptriangle'){
+                    triangle(sx, sy+100, sx + sw, sy, sx+sw, sy+100);
+                }*/
+                else if (s.type === 'arptriangle'){
+                    const sh = shapeHeight(s);
+                    triangle(sx, sy+sh, sx + sw, sy, sx+sw, sy+sh);
+                }
+                else if (s.type === 'diamond'){
+                    quad(sx, sy, sx + sw/2, sy - 50, sx +sw, sy, sx+sw/2, sy+50);
+                }
+                else if (s.type === 'sawtooth'){
+                    const tw = sw/3;
+                    triangle(sx, sy+100, sx+tw, sy, sx + tw, sy + 100);
+                    triangle(sx + tw, sy + 100, sx + tw * 2, sy, sx + tw * 2, sy + 100);
+                    triangle( sx + tw * 2, sy + 100, sx + tw * 3, sy, sx + tw * 3, sy + 100);
+                }
+                noStroke();
+            }
+
+            if (multiSelect.has(si) && si !== selectedShape){
+                stroke(0,255,100);
+                strokeWeight(4);
+                noFill();
+                if (s.type === 'square') rect(sx, sy, sw, 100);
+                else if (s.type === 'triangle') triangle(sx, sy+100, sx-sw/2, sy, sx+sw/2, sy);
+                else if (s.type === 'circle') ellipse(sx, sy, sw, 100);
+                else if (s.type === 'arptriangle'){ const sh=shapeHeight(s); triangle(sx,sy+sh,sx+sw,sy,sx+sw,sy+sh); }
+                else if (s.type === 'diamond') quad(sx,sy,sx+sw/2,sy-50,sx+sw,sy,sx+sw/2,sy+50);
+                else if (s.type === 'sawtooth'){ const tw=sw/3; triangle(sx,sy+100,sx+tw,sy,sx+tw,sy+100); triangle(sx+tw,sy+100,sx+tw*2,sy,sx+tw*2,sy+100); triangle(sx+tw*2,sy+100,sx+tw*3,sy,sx+tw*3,sy+100); }
+                noStroke();
+            }
+
+            let effectX = sx, effectY = sy, effectW = sw, effectH = 100;
+            if (s.type === 'triangle') {effectX = sx - sw/2;}
+            if (s.type === 'circle') {effectX = sx - sw/2; effectY = sy - 50;}
+            if (s.type === 'diamond') {effectY = sy - 50;}
+
+            if (s.effects.includes('distort')){
+                noStroke();
+                for (let i = 0; i < 30; i++){
+                    const gx = random(effectX, effectX + effectW); //rand x of shape
+                    const gy = random(effectY, effectY + effectH); //rand y of shape
+                    const gc = random(255); //rand grey val
+                    fill(gc,gc,gc,random(120,220)); //grey fill translucent
+                    rect(gx, gy,random(2,6),random(2,6)); //small squares
+                }
+            }
+            if (s.effects.includes('vibrato')){
+                drawingContext.save();
+                drawingContext.beginPath();
+                drawingContext.rect(effectX, effectY, effectW, 100);
+                drawingContext.clip();
+                noFill();
+                stroke(255,255,255,160);
+                strokeWeight(1.5);
+                for (let y = effectY + 10; y < effectY + effectH; y+=12){
+                    beginShape();
+                    for (let x = effectX; x <= effectX+ effectW; x += 3){
+                        vertex(x,y+sin((x*0.2) + frameCount * 0.12) * 4);
+                    }
+                    endShape();
+                }
+                drawingContext.restore();
+            }
+            
+            if (s.effects.includes('chorus')){
+                noStroke();
+                const ghostWidth = sw*0.5;
+                const ghostHeight = 100*0.5;
+                const ghostOffset = (100 - ghostHeight)/2;
+                fill(180, 180, 180, 50);
+                if (s.type === 'square'){
+                    rect(sx - ghostWidth - 10, sy + ghostOffset, ghostWidth, ghostHeight);
+                    rect(sx + sw + 10, sy + ghostOffset, ghostWidth, ghostHeight);
+                }
+                else if (s.type === 'triangle'){
+                    const gcx1 = sx - sw*0.5 - 10;
+                    triangle(gcx1, sy + ghostHeight, gcx1 - ghostWidth*0.5, sy + ghostOffset, gcx1 + ghostWidth*0.5, sy + ghostOffset);
+                    const gcx2 = sx + sw*0.5 + 10;
+                    triangle(gcx2, sy + ghostHeight, gcx2 - ghostWidth*0.5, sy + ghostOffset, gcx2 + ghostWidth*0.5, sy + ghostOffset);
+                }
+                else if (s.type === 'circle'){
+                    ellipse(sx - sw*0.6 - 10, sy, ghostWidth, ghostHeight);
+                    ellipse(sx + sw*0.6 + 10, sy, ghostWidth, ghostHeight);
+                }
+                else if (s.type === 'arptriangle'){
+                    const sh = shapeHeight(s);
+                    triangle(sx - ghostWidth - 10, sy + sh*0.6, sx - 10, sy + sh*0.1, sx - 10, sy + sh*0.6);
+                    const re = shapeEnd(s);
+                    triangle(re + 10, sy + sh*0.6, re + ghostWidth + 10, sy + sh*0.1, re + ghostWidth + 10, sy + sh*0.6);
+                }
+                else if (s.type === 'diamond'){
+                    const lx = sx - ghostWidth - 10;
+                    quad(lx, sy, lx + ghostWidth*0.5, sy - ghostHeight*0.5, lx + ghostWidth, sy, lx + ghostWidth*0.5, sy + ghostHeight*0.5);
+                    const rx = sx + sw + 10;
+                    quad(rx, sy, rx + ghostWidth*0.5, sy - ghostHeight*0.5, rx + ghostWidth, sy, rx + ghostWidth*0.5, sy + ghostHeight*0.5);
+                }
+                else if (s.type === 'sawtooth'){
+                    const gy = sy + ghostOffset;
+                    const gh = ghostHeight;
+                    triangle(sx - ghostWidth - 10, gy + gh, sx - ghostWidth*0.66 - 10, gy, sx - ghostWidth*0.66 - 10, gy + gh);
+                    triangle(sx - ghostWidth*0.66 - 10, gy + gh, sx - ghostWidth*0.33 - 10, gy, sx - ghostWidth*0.33 - 10, gy + gh);
+                    triangle(sx - ghostWidth*0.33 - 10, gy + gh, sx - 10, gy, sx - 10, gy + gh);
+                    const re = shapeEnd(s);
+                    triangle(re + 10, gy + gh, re + ghostWidth*0.33 + 10, gy, re + ghostWidth*0.33 + 10, gy + gh);
+                    triangle(re + ghostWidth*0.33 + 10, gy + gh, re + ghostWidth*0.66 + 10, gy, re + ghostWidth*0.66 + 10, gy + gh);
+                    triangle(re + ghostWidth*0.66 + 10, gy + gh, re + ghostWidth + 10, gy, re + ghostWidth + 10, gy + gh);
+                }
+                else if (s.type === 'piano' || s.type === 'violin' || s.type === 'flute'){
+                    rect(sx - ghostWidth - 10, sy + ghostOffset, ghostWidth, ghostHeight);
+                    rect(sx + sw + 10, sy + ghostOffset, ghostWidth, ghostHeight);
+                }
+            }
+            
+            
+            if (s.effects.includes('reverb')){
+                const pulse = (sin(frameCount * 0.05) *5);
+                noFill();
+                stroke(160, 160, 160, 180);
+                strokeWeight(1);
+                if (s.type === 'square'){
+                    rect(sx - pulse, sy - pulse, sw +pulse*2, 100 +pulse*2);
+                }
+                else if (s.type === 'triangle'){
+                    triangle(sx, sy + 100 + pulse, sx - sw/2 - pulse, sy - pulse, sx + sw/2 + pulse, sy-pulse);
+                }
+                else if (s.type === 'circle'){
+                    ellipse(sx, sy, sw+ pulse*2, 100 + pulse*2);
+                }
+                /*else if (s.type === 'arptriangle'){
+                    triangle(sx - pulse, sy + 100 + pulse, sx + sw + pulse, sy - pulse, sx + sw + pulse, sy + 100 + pulse);
+                }*/
+                else if (s.type === 'arptriangle'){
+                    const sh = shapeHeight(s);
+                    triangle(sx, sy+sh, sx + sw, sy, sx+sw, sy+sh);
+                }
+                else if (s.type === 'diamond'){
+                    quad(sx - pulse, sy, sx + sw/2, sy-50-pulse, sx + sw + pulse, sy, sx+sw/2, sy + 50 + pulse);
+                }
+                else if (s.type === 'sawtooth'){
+                    const tw = sw/3;
+                    triangle(sx -pulse, sy + 100 + pulse, sx + tw, sy - pulse, sx + tw, sy + 100 + pulse);
+                    triangle(sx + tw, sy + 100 + pulse, sx + tw*2, sy - pulse, sx + tw *2, sy + 100 + pulse);
+                    triangle(sx + tw*2, sy + 100 + pulse, sx + sw + pulse, sy - pulse, sx + sw + pulse, sy + 100 + pulse);
+                }
+                noStroke();
+            }
+            if (s.effects.includes('reverse')){
+                drawingContext.save();
+                drawingContext.translate(sx + sw/2, sy + 50);
+                drawingContext.scale(1, -1);
+                drawingContext.translate(-(sx + sw/2), -(sy + 50));
+                drawingContext.restore();
+            }
+    
+            //pitch label
+            fill(0, 200);
+            textSize(10);
+            textAlign(CENTER);
+            text(notes[noteIdx], sx, sy +70)            
+            }
+            
+            //sound when scanline touches shape centre
+            /*for (let s of shapes){
+                let cx = shapeStart(s);
+                if ((previous < cx && scanline >= cx) || (previous > scanline && (cx <= scanline || cx >= previous))){
+                    triggerShape(s);
+                }
+            }*/
+
+            for (let i = 0; i < shapes.length; i++){
+                let s = shapes[i];
+                let left = shapeStart(s);
+                let right = shapeEnd(s);
+                let inside = scanline >= left && scanline <= right;
+                if (inside && !activeShapes.has(i)){
+                    activeShapes.add(i);
+                    triggerAttack(s);
+                } 
+                else if (inside && activeShapes.has(i)){
+                    updateActivePitch(s);
+                }
+                else if (!inside && activeShapes.has(i)){
+                    activeShapes.delete(i);
+                    triggerRelease(s);
+                }
+            }
+
+            if (!dragging){
+                const mx = mouseX + scrollX;
+                let onStretchEdge = shapes.some((s, i) =>{
+                    const sy = resolveValue(s.y);
+                    const sw = resolveValue(s.w);
+                    let right = shapeEnd(s);
+                    const stretchYHit = s.type === 'voice'
+                        ? (mouseY > sy + 30 && mouseY < sy + 80)
+                        : (mouseY > sy && mouseY < sy + 100);
+                    return Math.abs(mx - right) < STRETCH && stretchYHit;
+                        //return Math.abs(mouseX - right) < STRETCH && mouseY > s.y && mouseY < s.y + 100;
+                });
+                const nearScanline = rHold && Math.abs((mouseX + scrollX) - scanline)<8;
+                if (onStretchEdge || stretchIndex !== -1 || nearScanline || draggingScanline){
+                    cursor('move');
+                } else {
+                    cursor(ARROW);
+                }
+            }
+            //draw scanline
+            stroke(220, 0 ,0);
+            strokeWeight(2);
+            line(scanline, 0, scanline, height);
+        
+    }   
+        //returns start of shape
+        function shapeStart(s){
+            const sx = resolveValue(s.x);
+            const sw = resolveValue(s.w);
+            if (s.type === 'square'){
+                return sx;
+            }
+            if (s.type === 'triangle'){
+                return sx - sw/2;
+            }
+            if (s.type === 'circle'){
+                return sx - sw/2;
+            }
+            if (s.type === 'arptriangle'){
+                return sx;
+            }
+            if (s.type === 'diamond'){
+                return sx;
+            }
+            if (s.type === 'sawtooth'){
+                return sx;
+            }
+            return sx;
+        }
+        //returns end of shape
+        function shapeEnd(s){
+            const sx = resolveValue(s.x);
+            const sw = resolveValue(s.w);
+            if(s.type === 'square') return sx + sw;
+            if (s.type === 'triangle') return sx + sw/2;
+            if (s.type === 'circle') return sx + sw/2;
+            if (s.type === 'arptriangle') return sx + sw;
+            if (s.type === 'diamond') return sx + sw;
+            if (s.type === 'sawtooth') return sx + sw;
+            return sx + sw;
+        }
+
+        //sound for shape
+        function triggerShape(s){
+            const notes = ['C5', 'B4', 'Bb4', 'A4', 'Ab4', 'G4', 'Gb4', 'F4', 'E4', 'Eb4', 'D4', 'Db4', 'C4', 'B3', 'Bb3', 'A3', 'Ab3', 'G3', 'Gb3', 'F3', 'E3', 'Eb3', 'D3', 'Db3', 'C3']
+            const noteIndex = Math.floor((s.y/height)* notes.length);
+            const pitch = notes[Math.min(noteIndex, notes.length -1)];
+            if (s.type === 'square'){
+                squareSynth.triggerAttackRelease(pitch,"8n");
+            }
+            if (s.type === 'triangle'){
+                triangleSynth.triggerAttackRelease(pitch, "8n");
+            }
+            if (s.type === 'circle'){
+                sineSynth.triggerAttackRelease (pitch, "8n");
+            }
+            //staggered notes
+            if (s.type === 'arptriangle'){
+                arpSynth.releaseAll();
+                const baseIdx = Math.min(Math.floor((s.y/height) *notes.length), notes.length -1);
+                const arpNotes = [
+                    notes[baseIdx],
+                    notes[Math.max(baseIdx - 2, 0)],
+                    notes[Math.max(baseIdx - 4, 0)],
+                    notes[Math.max(baseIdx - 7, 0)],
+                ];
+                arpNotes.forEach((note, i) => {
+                    arpSynth.triggerAttackRelease(note, '16n', `+${i*0.1}`);
+                });
+            }
+            if (s.type === 'diamond'){
+                diamondSynth.triggerAttackRelease(pitch, "8n");
+            }
+        }
+
+        function triggerAttack(s){
+            const noteIndex = Math.min(Math.floor((resolveValue(s.y)/height) * notes.length), notes.length - 1);
+            const pitch = notes[noteIndex];
+            const vol = getEffectiveVol(s);
+            if (s.type === 'square') {
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){squareSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(squareSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                squareSynth.volume.value = vol;
+                const revSq = s.effects.includes('reverse');
+                squareSynth.set({envelope:{attack: revSq ? (s.release||0.5) : (s.attack||0.01), release: revSq ? (s.attack||0.01) : (s.release||0.5)}});
+                //squareSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){squareSynth.triggerAttack(pitch); s._activePitch = pitch;}
+            }
+            if (s.type === 'triangle'){
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){triangleSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(triangleSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                triangleSynth.volume.value = vol;
+                const revTri = s.effects.includes('reverse');
+                triangleSynth.set({envelope:{attack: revTri ? (s.release||0.5) : (s.attack||0.01), release: revTri ? (s.attack||0.01) : (s.release||0.5)}});
+                //triangleSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){triangleSynth.triggerAttack(pitch); s._activePitch = pitch;}
+            }
+            if (s.type === 'circle'){
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){sineSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(sineSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                sineSynth.volume.value = vol;
+                const revSin = s.effects.includes('reverse');
+                sineSynth.set({envelope:{attack: revSin ? (s.release||0.5) : (s.attack||0.01), release: revSin ? (s.attack||0.01) : (s.release||0.5)}});
+                //sineSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){sineSynth.triggerAttack(pitch); s._activePitch = pitch;}
+            }
+            //staggered notes
+            if (s.type === 'arptriangle'){
+                const sy = resolveValue(s.y);
+                const baseIdx = Math.min(Math.floor((sy/height) *notes.length), notes.length -1);
+                const span = s.span || 1;
+                const arpNotes = Array.from({length:span}, (_, i) =>
+                    notes[Math.max(baseIdx - i, 0)]
+                );
+                /*const arpNotes = [
+                    notes[baseIdx],
+                    notes[Math.max(baseIdx - 2, 0)],
+                    notes[Math.max(baseIdx - 4, 0)],
+                    notes[Math.max(baseIdx - 7, 0)],
+                ];*/
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){arpSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(arpSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                arpSynth.volume.value = vol;
+                const revArp = s.effects.includes('reverse');
+                arpSynth.set({envelope:{attack: revArp ? (s.release||0.5) : (s.attack||0.01), release: revArp ? (s.attack||0.01) : (s.release||0.5)}});
+                //arpSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){
+                    arpNotes.forEach((note, i) => {
+                        arpSynth.triggerAttackRelease(note, '16n', `+${i*0.1}`);
+                });
+            }
+            }
+            if (s.type === 'diamond'){
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){diamondSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(diamondSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                diamondSynth.volume.value = vol;
+                const revDia = s.effects.includes('reverse');
+                diamondSynth.set({envelope:{attack: revDia ? (s.release||0.5) : (s.attack||0.01), release: revDia ? (s.attack||0.01) : (s.release||0.5)}});
+                //diamondSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){diamondSynth.triggerAttack(pitch); s._activePitch = pitch;}
+            }
+            if (s.type === 'sawtooth'){
+                const fxKey = (s.effects || []).join('.');
+                if (s._lastFxKey !== fxKey){
+                if (s._activePitch){sawtoothSynth.triggerRelease(s._activePitch); s._activePitch = null; }
+                applyEffects(sawtoothSynth, s.effects);
+                s._lastFxKey = fxKey;
+                }
+                sawtoothSynth.volume.value = vol;
+                const revSaw = s.effects.includes('reverse');
+                sawtoothSynth.set({envelope:{attack: revSaw ? (s.release||0.5) : (s.attack||0.01), release: revSaw ? (s.attack||0.01) : (s.release||0.5)}});
+                //sawtoothSynth.set({envelope:{attack: s.attack||0.01, release: s.release||0.5}});
+                if (shapeAlpha(s) > 0){sawtoothSynth.triggerAttack(pitch); s._activePitch = pitch;}
+            }
+            //voice
+            if (s.type === 'voice'){
+                const label = s.label && s.label.trim() ? s.label.trim() :null;
+                if (!label || shapeAlpha(s) === 0) return;
+                const pitchRatio = 1 - (noteIndex / notes.length);
+                const rateRatio = 150 / resolveValue(s.w);
+                const utt = new SpeechSynthesisUtterance(label);
+                utt.pitch = 0.1 + pitchRatio * 2;
+                utt.rate = Math.max(0.1, Math.min(2, rateRatio));
+                utt.volume = shapeAlpha(s);
+                speechSynthesis.speak(utt);
+            }
+            //piano
+            if (s.type === 'piano'){
+                if (!sampleReady) return;
+                const fxKey = (s.effects||[]).join('.');
+                if (s._lastFxKey !== fxKey){applyEffectsToSample(pianoSample, s.effects); s._lastFxKey = fxKey;}
+                pianoSample.volume.value = vol;
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){pianoSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+            }
+            //violin
+            if (s.type === 'violin'){
+                if (!sampleReady) return;
+                const fxKey = (s.effects||[]).join('.');
+                if (s._lastFxKey !== fxKey){applyEffectsToSample(violinSample, s.effects); s._lastFxKey = fxKey;}
+                violinSample.volume.value = vol;
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){violinSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+            }
+            //flute
+            if (s.type === 'flute'){
+                if (!sampleReady) return;
+                const fxKey = (s.effects||[]).join('.');
+                if (s._lastFxKey !== fxKey){applyEffectsToSample(fluteSample, s.effects); s._lastFxKey = fxKey;}
+                fluteSample.volume.value = vol;
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){fluteSample.triggerAttack(safePitch); s._activePitch = safePitch;}
+            }
+        }
+        function triggerRelease(s){
+            if (s.type === 'square') {
+                if (s._activePitch){squareSynth.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'triangle') {
+                if (s._activePitch){triangleSynth.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'circle') {
+                if (s._activePitch){sineSynth.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'arptriangle') {
+                arpSynth.releaseAll();
+            }
+            if (s.type === 'diamond'){
+                if (s._activePitch){diamondSynth.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'sawtooth'){
+                if (s._activePitch){sawtoothSynth.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'voice'){
+
+            }
+            if (s.type === 'piano'){
+                if (s._activePitch){pianoSample.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'violin'){
+                if (s._activePitch){violinSample.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+            if (s.type === 'flute'){
+                if (s._activePitch){fluteSample.triggerRelease(s._activePitch); s._activePitch = null;}
+            }
+        }
+
+        function keyPressed(){
+            if (!canvasFocus) return;
+            if (key === 'g'){
+                gridVisible = !gridVisible;
+                return false;
+            }
+            if (key === 'q'){
+                qHold = true;
+                return false;
+            }
+            if (key === 'd'){
+                const targets = multiSelect.size > 0 ? [...multiSelect] : (selectedShape !== -1 ? [selectedShape] : []);
+                if (targets.length > 0){
+                    const newIndices = [];
+                    targets.forEach(idx => {
+                        const orig = shapes[idx];
+                        const copy = JSON.parse(JSON.stringify(orig)) ;
+                        copy.x = {value: resolveValue(orig.x) + 20, animated: false};
+                        copy._activePitch = null;
+                        copy._lastFxKey = null;
+                        shapes.push(copy);
+                        newIndices.push(shapes.length - 1);
+                    });
+                    multiSelect = new Set(newIndices);
+                    selectedShape = newIndices[newIndices.length - 1];
+                    syncEditorFromShapes();
+                }
+                /*if (selectedShape !== -1){
+                    const orig = shapes[selectedShape];
+                    const copy = JSON.parse(JSON.stringify(orig));
+                    copy.x = {value:resolveValue(orig.x) + 20, animated:false};
+                    copy._activePitch = null;
+                    copy._lastFxKey = null;
+                    shapes.push(copy);
+                    selectedShape = shapes.length - 1;
+                    syncEditorFromShapes();
+                }*/
+                return false;
+            }
+            if (key === 'r'){
+                rHold = true;
+                return false;
+            }
+            if (key === '=' || key === '+'){
+                zoomLevel = Math.min(2.0, zoomLevel + 0.1);
+                applyZoom();
+                return false;
+            }
+            if (key === 'h'){
+                const overlay = document.getElementById('help-overlay');
+                overlay.style.opacity = overlay.style.opacity === '0'? '1': '0';
+                return false;
+            }
+            if (key === '-' || key === '_'){
+                zoomLevel = Math.max(0.2, zoomLevel - 0.1);
+                applyZoom();
+                return false;
+            }
+            if (keyCode === BACKSPACE && selectedShape !== -1 && voiceIndex === -1){
+                const targets = multiSelect.size > 0 ? [...multiSelect].sort((a,b)=>b-a) : (selectedShape !== -1 ? [selectedShape] : []);
+                if (targets.length > 0){
+                    targets.forEach(idx => {
+                        triggerRelease(shapes[idx]);
+                        activeShapes.delete(idx);
+                    });
+                    targets.sort((a,b)=>b-a).forEach(idx => shapes.splice(idx,1));
+                    multiSelect.clear();
+                    selectedShape = -1;
+                    syncEditorFromShapes();
+                }
+                /*triggerRelease(shapes[selectedShape]);
+                activeShapes.delete(selectedShape);
+                shapes.splice(selectedShape, 1);
+                selectedShape = -1;
+                syncEditorFromShapes();*/
+                return false;
+            }
+            if (key === ' ' && voiceIndex === -1){
+                playing = !playing;
+                document.getElementById('pause-play').textContent = playing ? 'pause' : 'play';
+                return false;
+            
+            }
+            if (voiceIndex === -1) return;
+            let s = shapes[voiceIndex];
+            if (keyCode === ENTER || keyCode === ESCAPE){
+                if (!s.label) s.label = 'text';
+                voiceIndex = -1;
+            } else if (keyCode === BACKSPACE){
+                s.label = (s.label || '').slice(0, -1);
+            } else if (key.length === 1){
+                s.label = (s.label || '') + key;
+            }
+            syncEditorFromShapes();
+            return false;
+        }
+
+        function keyReleased(){
+            if (!canvasFocus) return;
+            if (key === 'r'){
+                rHold = false;
+            }
+            if (key === 'q'){
+                qHold = false;
+            }
+        }
+
+        async function mousePressed() {
+            const mx = (mouseX + scrollX) /zoomLevel;
+            if (rHold && Math.abs(mx -scanline) < 8){
+                draggingScanline = true;
+                return;
+            }
+            if (dragging) return;
+            pressedIndex = -1;
+            stretchIndex = -1;
+            if (voiceIndex !== -1){
+                let s = shapes[voiceIndex];
+                if (!s.label) s.label = 'text';
+                voiceIndex = -1;
+                syncEditorFromShapes();
+            }
+            try { await Tone.start(); } catch(err) {}
+            try { initSamplers(); } catch(err) {}
+            /*await Tone.start();
+            initSamplers();*/
+            let hitObject = false;
+
+            for (let i = shapes.length - 1; i >= 0; i--){
+                const s = shapes[i];
+                //if (s.type !== 'square') continue;
+                const sx = resolveValue(s.x);
+                const sy = resolveValue(s.y);
+                const sw = resolveValue(s.w);
+                let dotCentreX = sx + sw/2;
+                let dotCentreY = sy + 50;
+                if (s.type === 'triangle'){dotCentreX=sx;dotCentreY = sy+66;}
+                if (s.type === 'circle'){dotCentreX=sx;dotCentreY = sy;}
+                if (s.type === 'arptriangle'){dotCentreX=sx + sw*0.66; dotCentreY = sy + shapeHeight(s)*0.66;}
+                //if (s.type === 'arptriangle'){dotCentreX=sx + sw*0.66;dotCentreY = sy+66;}
+                if (s.type === 'diamond'){dotCentreX=sx + sw/2;dotCentreY = sy;}
+                if (s.type === 'sawtooth'){dotCentreX=sx+sw/2;dotCentreY = sy+66;}
+                if (s.type === 'voice'){dotCentreX=sx+sw/2;dotCentreY = sy+55;}
+                const dotX = dotCentreX + (s.insideX -0.5) *sw;
+                const dotY = dotCentreY + (s.insideY - 0.5) *100;
+                if (mx > dotX - 8 && mx < dotX + 8 && mouseY/zoomLevel > dotY - 8 && mouseY/zoomLevel < dotY + 8){
+                //if (dist(mx,mouseY,dotX, dotY)<10){
+                    insideDragIndex = i;
+                    hitObject = true;
+                    return;
+                }
+            }
+
+            //check if clicking shape
+            for (let i = shapes.length - 1; i >=0; i--){
+                let s = shapes[i];
+                const sx = resolveValue(s.x);
+                const sy = resolveValue(s.y);
+                const sw = resolveValue(s.w);
+                let right = shapeEnd(s);
+                const stretchYHit = s.type === 'voice'
+                    ? (mouseY/zoomLevel > sy + 30 && mouseY/zoomLevel < sy + 80)
+                    : (mouseY/zoomLevel > sy && mouseY/zoomLevel < sy + 100);
+                if (Math.abs(mx -right) < STRETCH && stretchYHit){
+                //if (Math.abs(mouseX - right) < STRETCH && mouseY > s.y && mouseY < s.y + 100){
+                    stretchStartWidth = resolveValue(s.w);
+                    stretchStartMouseX = mx;
+                    stretchingOffsetX = shapeEnd(s)-mx;
+                    stretchIndex = i;
+                    selectedShape = i;
+                    highlightEditorLine(i);
+                    hitObject = true;
+                    return;
+                }
+            
+                let inside = false;
+                if (s.type === 'square') {
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy && mouseY/zoomLevel < sy + 100;
+                }
+                if (s.type === 'triangle') {
+                    inside = mx > sx - sw/2 && mx < sx +sw/2 && mouseY /zoomLevel> sy && mouseY /zoomLevel< sy + 100;
+                }
+                if (s.type === 'circle') {
+                    inside = mx > sx - sw/2 && mx < sx + sw/2 && mouseY /zoomLevel> sy -50 && mouseY/zoomLevel < sy + 50;
+                }
+                if (s.type === 'arptriangle') {
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy && mouseY /zoomLevel< sy + shapeHeight(s);
+                }
+                //if (s.type === 'arptriangle') {
+                //    inside = mx > sx && mx < sx + sw && mouseY > sy && mouseY < sy + 100;
+                //}
+                if (s.type === 'diamond'){
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy - 50 && mouseY/zoomLevel < sy + 50;
+                }
+                if (s.type === 'sawtooth'){
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy && mouseY/zoomLevel < sy + 100;
+                }
+                if (s.type === 'voice'){
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy + 30 && mouseY/zoomLevel < sy + 80;
+                }
+                if (s.type === 'piano'){
+                    inside = mx > sx && mx < sx + sw && mouseY /zoomLevel > sy && mouseY/zoomLevel < sy + 100;
+                }
+                if (s.type === 'violin'){
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel> sy && mouseY /zoomLevel < sy + 100;
+                }
+                if (s.type === 'flute'){
+                    inside = mx > sx && mx < sx + sw && mouseY/zoomLevel > sy && mouseY/zoomLevel < sy + 100;
+                }
+                if (inside){
+                    hitObject = true;
+                    pressedIndex = i;
+                    draggingOffsetX = mx - resolveValue(s.x);
+                    draggingOffsetY = mouseY / zoomLevel - resolveValue(s.y);
+                    //draggingOffsetY = (mouseY + scrollY) / zoomLevel - resolveValue(s.y);
+                    //draggingOffsetY = mouseY/zoomLevel - resolveValue(s.y);
+                    if (qHold){
+                        if (selectedShape !== -1) multiSelect.add(selectedShape);
+                        if (multiSelect.has(i)) multiSelect.delete(i);
+                        else multiSelect.add(i);
+                        selectedShape = i;
+                    } else{
+                        multiSelect.clear();
+                        if (selectedShape === i){
+                            selectedShape = -1;
+                            editor.setSelectionRange(0,0);
+                        } else{
+                            selectedShape = i;
+                            highlightEditorLine(i);
+                        }
+                    }
+                    /*if (selectedShape === i){
+                        selectedShape = -1;
+                        editor.setSelectionRange(0,0);
+                    } else {
+                        selectedShape = i;
+                        highlightEditorLine(i);
+                    }*/
+                    
+                    break
+                }
+                /*if (s.type === 'square' && mouseX > s.x && mouseX < s.x + s.w && mouseY > s.y && mouseY < s.y + 100){
+                    draggingIndex = i;
+                    break;
+                }
+                else if (s.type === 'triangle' && mouseX > s.x - s.w/2 && mouseX < s.x +s.w/2 && mouseY > s.y && mouseY < s.y + 100){
+                    draggingIndex = i;
+                    break;
+                }
+                else if (s.type === 'circle' && mouseX > s.x - s.w/2 && mouseX < s.x + s.w/2 && mouseY > s.y -50 && mouseY < s.y + 50){
+                    draggingIndex = i;
+                    break;
+                }
+                else if (s.type === 'arptriangle' && mouseX > s.x && mouseX < s.x + s.w && mouseY > s.y && mouseY < s.y + 100){
+                    draggingIndex = i;
+                    break;
+                }*/
+        }
+        if (!hitObject){
+            if (!qHold){
+                multiSelect.clear();
+                selectedShape = -1;
+                editor.setSelectionRange(0,0);
+            }
+        }
+     }
+        //drag shape
+        function mouseDragged(){
+            const mx = (mouseX + scrollX)/zoomLevel;
+            if (draggingScanline){
+                scanline = mouseX + scrollX;
+                return;
+            }
+            if (dragging) return;
+            if (insideDragIndex !== -1){
+                const s = shapes[insideDragIndex];
+                const sx = resolveValue(s.x);
+                const sy = resolveValue(s.y);
+                const sw = resolveValue(s.w);
+                let dotCentreX = sx + sw/2;
+                let dotCentreY = sy + 50;
+                if (s.type === 'triangle'){dotCentreX=sx;dotCentreY = sy+66;}
+                if (s.type === 'circle'){dotCentreX=sx;dotCentreY = sy;}
+                if (s.type === 'arptriangle'){dotCentreX=sx + sw*0.66;dotCentreY = sy+66;}
+                if (s.type === 'diamond'){dotCentreX=sx + sw/2;dotCentreY = sy;}
+                if (s.type === 'sawtooth'){dotCentreX=sx+sw/2;dotCentreY = sy+66;}
+                if (s.type === 'voice'){dotCentreX=sx+sw/2;dotCentreY = sy+55;}
+
+                s.insideX = constrain((mx - dotCentreX)/sw + 0.5, 0, 1);
+                s.insideY = constrain((mouseY/zoomLevel - dotCentreY)/100 + 0.5, 0, 1);
+                updateEnvelopeFromInside(s);
+                syncEditorFromShapes();
+                return;
+            }
+            if (stretchIndex !== -1){
+                //const s = shapes[stretchIndex];
+                const delta = mx - stretchStartMouseX;
+                const newWidth = Math.max(20, keyIsDown(SHIFT) ? snap(stretchStartWidth + delta):stretchStartWidth + delta);
+                const targets = multiSelect.size >= 1 ? [...multiSelect] : [stretchIndex];
+                targets.forEach(idx => {
+                    const s = shapes[idx];
+                    if (!s.w?.animated) s.w = {value:newWidth, animated: false};
+                });
+                //const s = shapes[stretchIndex];
+                //const newWidth = mouseX + stretchingOffsetX - resolveValue(s.x);
+                //const clamped = Math.max(20, keyIsDown(SHIFT) ? snap(newWidth) : newWidth);
+                //if (!s.w?.animated) s.w = { value: clamped, animated: false };
+                //let s = shapes[stretchIndex];
+                //let newWidth = mouseX - shapeStart(s);
+                //s.w = Math.max(20, keyIsDown(SHIFT) ? snap(newWidth):newWidth);
+                syncEditorFromShapes();
+                return;
+            }
+            if (pressedIndex !== -1 && draggingIndex === -1){
+                draggingIndex = pressedIndex;
+                if (multiSelect.size >= 1) multiSelect.add(draggingIndex);
+            }
+            if (draggingIndex !== -1){
+                const nx = keyIsDown(SHIFT) ? snap(mx - draggingOffsetX) : mx - draggingOffsetX;
+                const ny = keyIsDown(SHIFT) ? snap(mouseY/zoomLevel - draggingOffsetY) : mouseY/zoomLevel - draggingOffsetY;
+                //const ny = keyIsDown(SHIFT) ? snap((mouseY + scrollY)/zoomLevel - draggingOffsetY) : (mouseY + scrollY)/zoomLevel - draggingOffsetY;
+                //const ny = keyIsDown(SHIFT) ? snap(mouseY/zoomLevel - draggingOffsetY) : mouseY/zoomLevel - draggingOffsetY;
+                const primary = shapes[draggingIndex];
+                const dx = nx - resolveValue(primary.x);
+                const dy = ny - resolveValue(primary.y);
+                if (!primary.x?.animated) primary.x = {value:nx, animated:false};
+                if (!primary.y?.animated) primary.y = {value:ny, animated:false};
+                //const targets = multiSelect.size > 1 ? [...multiSelect] : [draggingIndex];
+                if (multiSelect.size>=1){
+                    [...multiSelect].filter(idx => idx !== draggingIndex).forEach(idx=>{
+                    const s = shapes[idx];
+                    if (!s.x?.animated) s.x = { value: resolveValue(s.x) + dx, animated: false };
+                    if (!s.y?.animated) s.y = { value: resolveValue(s.y) + dy, animated: false };
+                });
+                }
+                /*const s = shapes[draggingIndex];
+                if (!s.x?.animated) s.x = { value: nx, animated: false };
+                if (!s.y?.animated) s.y = { value: ny, animated: false };*/
+                //shapes[draggingIndex].x = mouseX;
+                //shapes[draggingIndex].y = mouseY;
+                //shapes[draggingIndex].x = keyIsDown(SHIFT) ? snap(mouseX):mouseX;
+                //shapes[draggingIndex].y = keyIsDown(SHIFT) ? snap(mouseY):mouseY;
+                syncEditorFromShapes();
+            }
+        }
+
+        //stop dragging shape
+        function mouseReleased(){
+            stretchIndex = -1;
+            draggingIndex = -1;
+            pressedIndex = -1;
+            insideDragIndex = -1;
+            draggingScanline = false;
+        }
+
+        //volume functions
+        function shapeAlpha(s){
+           // const v = (s.vol === undefined || s.vol === null) ? 100 : s.vol;
+           // return Math.max(0,Math.min(100,v))/100;
+           const v = s.vol;
+           if (!v || v === null) return 1;
+           if (!v.animated) return Math.max(0, Math.min(100, v.value ?? v))/100;
+           const t = (millis() / 1000)%v.period;
+           const norm = (Math.sin((t/v.period) *Math.PI*2 - Math.PI/2)+1)/2;
+           return (v.min + (v.max - v.min)*norm)/100;
+        }
+        function alphaToDb(a){
+            if (a <= 0) return -Infinity;
+            return 20 * Math.log10(a);
+        }
+        function getSynthVolume(s){
+            const alpha = shapeAlpha(s);
+            return alphaToDb(alpha);
+        }
+        function getEffectiveVol(s){
+            if (muted) return -Infinity;
+            return getSynthVolume(s);
+        }
+        function parseVol(line){
+            //changing volume 
+            const cv = line.match(/\bvol\.\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)\.([\d.]+)\b/i);
+            if (cv) return { min: parseFloat(cv[1]), max: parseFloat(cv[2]), period: parseFloat(cv[3]), animated:true};
+            // constant vol
+            const m = line.match(/\bvol\.(\d+(?:\.\d+)?)\b/i);
+            if (m) return {value: parseFloat(m[1]), animated: false
+                //const v = {value: parseFloat(m[1]), animated: false};
+                //return Math.max(0, Math.min(100, v));
+            };
+            return undefined;
+        }
+        function parseAtt(line){
+            const m = line.match(/\batt\.([\d]+)\b/i);
+            return m ? parseFloat(m[1]):0.01;
+        }
+        function parseRel(line){
+            const m = line.match(/\brel\.([\d.]+)\b/i);
+            return m ? parseFloat(m[1]):0.5;
+        }
+        function parseMovement(str){
+            const mv = str.match(/^\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)\.([\d.]+)$/);
+            if (mv) return { min: parseFloat(mv[1]), max: parseFloat(mv[2]), period: parseFloat(mv[3]), animated: true};
+            return { value: parseFloat(str), animated: false};
+        }
+        function resolveValue(v){
+            if (v === null || v === undefined) return 0;
+            if (!v.animated) return v.value ?? v;
+            const t = (millis() /1000) % v.period;
+            const norm = (Math.sin((t/v.period) *Math.PI *2 - Math.PI/2) +1)/2;
+            return v.min + (v.max - v.min)*norm;
+        }
+        function serialiseVal(v){
+            if (!v?.animated) return Math.round(v?.value ?? v);
+            return `(${v.min}-${v.max}).${v.period}`;
+        }
+        
+        function applyEffects(synth, effects){
+            synth.disconnect();
+            if (!effects || effects.length === 0){
+                synth.toDestination();
+                return;
+            }
+            const effectsList = effects.map(effect =>{
+                if (effect === 'vibrato') return new Tone.Vibrato({frequency: 5, depth: 0.5});
+                if (effect === 'distort') return new Tone.Distortion(0.8);
+                if (effect === 'reverb') return new Tone.Reverb({decay:3, wet: 0.6});
+                if (effect === 'chorus') return new Tone.Chorus(4, 2.5, 0.5).start();
+                if (effect === 'reverse') return null;
+                return null;
+            }).filter(Boolean);
+            if (effectsList.length === 0){synth.toDestination(); return;}
+            synth.connect(effectsList[0]);
+            for (let i = 0; i < effectsList.length - 1; i++) effectsList[i].connect(effectsList[i+1]);
+            effectsList[effectsList.length - 1].toDestination();
+        }
+        
+        function applyEffectsToSample(sampler, effects){
+            sampler.disconnect();
+            sampler.set({ reverse: effects.includes('reverse') });
+            if (!effects || effects.length === 0){
+                sampler.toDestination();
+                return;
+            }
+            const effectsList = effects.map(effect =>{
+                if (effect === 'vibrato') return new Tone.Vibrato({frequency: 5, depth: 0.5});
+                if (effect === 'distort') return new Tone.Distortion(0.8);
+                if (effect === 'reverb') return new Tone.Reverb({decay:3, wet: 0.6});
+                if (effect === 'chorus') return new Tone.Chorus(4, 2.5, 0.5).start();
+                return null;
+            }).filter(Boolean);
+            if (effectsList.length === 0){
+                sampler.toDestination(); 
+                return;
+            }
+            sampler.connect(effectsList[0]);
+            for (let i = 0; i < effectsList.length-1;i++) effectsList[i].connect(effectsList[i+1]);
+            effectsList[effectsList.length-1].toDestination();
+        }
+
+        function updateEnvelopeFromInside(s){
+            s.attack = (s.insideX || 0.1)*2;
+            s.release = (s.insideY || 0.1)*4;
+        }
+        function updateActivePitch(s){
+            if (!s._activePitch) return;
+            if (s.type === 'voice' || s.type === 'arptriangle') return;
+            const noteIndex = Math.min(
+                Math.floor((resolveValue(s.y)/height) * notes.length),
+                notes.length - 1
+            );
+            const newPitch = notes[noteIndex];
+            if(newPitch === s._activePitch) return;
+            const vol = getEffectiveVol(s);
+            if (s.type === 'square'){
+                squareSynth.volume.value = vol;
+                squareSynth.triggerRelease(s._activePitch);
+                squareSynth.triggerAttack(newPitch);
+            }
+            if (s.type === 'striangle'){
+                triangleSynth.volume.value = vol;
+                triangleSynth.triggerRelease(s._activePitch);
+                triangleSynth.triggerAttack(newPitch);
+            }
+            if (s.type === 'circle'){
+                sineSynth.volume.value = vol;
+                sineSynth.triggerRelease(s._activePitch);
+                sineSynth.triggerAttack(newPitch);
+            }
+            if (s.type === 'diamond'){
+                diamondSynth.volume.value = vol;
+                diamondSynth.triggerRelease(s._activePitch);
+                diamondSynth.triggerAttack(newPitch);
+            }
+            if (s.type === 'sawtooth'){
+                sawtoothSynth.volume.value = vol;
+                sawtoothSynth.triggerRelease(s._activePitch);
+                sawtoothSynth.triggerAttack(newPitch);
+            }
+            if (s.type === 'piano'){
+                pianoSample.triggerRelease(s._activePitch);
+                pianoSample.triggerAttack(newPitch);
+            }
+            if (s.type === 'violin'){
+                violinSample.triggerRelease(s._activePitch);
+                violinSample.triggerAttack(newPitch);
+            }
+            if (s.type === 'flute'){
+                fluteSample.triggerRelease(s._activePitch);
+                fluteSample.triggerAttack(newPitch);
+            }
+            
+            s._activePitch = newPitch;
+        }
+        //change text editor as shape moves
+        function syncEditorFromShapes(){
+            if (shapes.length > 0){
+                document.getElementById('help-overlay').style.opacity = '0';
+            }
+            suppressEditorUpdate = true;
+            const existingLines = editor.value.split('\n');
+            const speedLine = existingLines.find(l => /^speed\s/i.test(l.trim()));
+            const shapeLines = shapes.map(s => {
+                const idx = Math.min(Math.floor(((resolveValue(s.y) + shapeHeight(s) / 2) / height) * notes.length), notes.length - 1);
+                //const idx = Math.min(Math.floor((resolveValue(s.y)/height) * notes.length), notes.length -1);
+                const labelPart = s.type === 'voice' ? ` ${s.label || 'text'}` : '';
+                const v = s.vol;
+                const isDefault = !v || (!v.animated && (v.value === 100|| v === 100));
+                //const volPart = (s.vol !== undefined && s.vol !== 100) ? ` vol.${s.vol}` : '';
+                const volPart = isDefault ? '': v.animated ? ` vol.(${v.min}-${v.max}).${v.period}`:`vol.${v.value}`;
+                const attPart = (s.attack && s.attack !== 0.01) ? ` att.${parseFloat(s.attack.toFixed(2))}` : '';
+                const relPart = (s.release && s.release !== 0.5) ? ` rel.${parseFloat(s.release.toFixed(2))}` : '';
+                const spanStr = (s.type === 'arptriangle' && (s.span || 1) > 1) ? `.${s.span}` : '';
+                const effectStr = s.effects && s.effects.length > 0 ? `.${s.effects.join('.')}` : '';
+                const typeStr = `${s.type}${spanStr}${effectStr}`;
+                //const typeStr = s.effects && s.effects.length > 0 ? `${s.type}.${s.effects.join('.')}` : s.type;
+                return `${typeStr} (${serialiseVal(s.x)},${serialiseVal(s.y)}) ${serialiseVal(s.w)}${labelPart}${volPart}${attPart}${relPart} //${notes[idx]}`;
+                //return `${typeStr} (${serialiseVal(s.x)},${serialiseVal(s.y)}) ${serialiseVal(s.w)}${labelPart}${volPart} //${notes[idx]}`;
+                //return `${s.type} ${(s.x/width).toFixed(4)} ${(s.y/height).toFixed(4)} ${(s.w/width).toFixed(4)}${labelPart}${volPart} //${notes[idx]}`;
+                //return `${s.type} (${Math.round(s.x)},${Math.round(s.y)}) ${Math.round(s.w)}${labelPart}${volPart} //${notes[idx]}`;
+                //return `${s.type} ${Math.round(s.x)} ${Math.round(s.y)} ${Math.round(s.w)}${labelPart} //${notes[idx]}`;
+            }).join('\n');
+            editor.value = speedLine ? speedLine + '\n' + shapeLines : shapeLines;
+            /*editor.value = shapes.map(s => {
+                const idx = Math.min(Math.floor((s.y/height) * notes.length), notes.length - 1);
+                return `${s.type} ${Math.round(s.x)} ${Math.round(s.y)} // ${notes[idx]}`;
+            }).join('\n');*/
+            suppressEditorUpdate = false;
+            resizeEditor();
+        }
+
+        function splitCoordPair(token){
+            if (!token || token[0] !== '(' || token[token.length - 1] !== ')') return null;
+
+            let depth = 0;
+            for (let i = 0; i < token.length; i++){
+                const ch = token[i];
+                if (ch === '(') depth++;
+                else if (ch === ')') depth--;
+                else if (ch === ',' && depth === 1){
+                    return [
+                        token.slice(1, i),
+                        token.slice(i + 1, -1)
+                    ];
+                }
+            }
+            return null;
+        }
+    
+        //move shapes as text editor changes
+        function syncShapesFromEditor(){
+            if (suppressEditorUpdate) return;
+            activeShapes.forEach(i => {if (shapes[i]) triggerRelease(shapes[i]);});
+            activeShapes.clear();
+            parseSpeedFromEditor();
+            shapes = editor.value.split('\n')
+            .map(line => line.replace(/\/\/.*$/, '').trim())
+            .filter(line => line.length >0 && !/^speed\s/i.test(line))
+            .map(line => {
+                //const [type, x, y, w] = line.split(/\s+/);
+                //return {type: (type||'').toLowerCase(), x: parseFloat(x), y: parseFloat(y), w: parseFloat(w) || 100};
+                const withoutComment = line.replace(/\/\/.*$/,'').trim();
+                const volVal = parseVol(withoutComment);
+                const attVal = parseAtt(withoutComment);
+                const relVal = parseRel(withoutComment);
+                const cleanedRaw = withoutComment
+                    .replace(/\bvol\.\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)\.\d+(?:\.\d+)?/gi, '')
+                    .replace(/\bvol[\.\d]*/gi,'')
+                    .replace(/\s+/g,' ').trim();
+                const parts = cleanedRaw.split(/\s+/);
+                const rawType = (parts[0] || '').toLowerCase();
+                const typeParts = rawType.split('.');
+                const type = typeParts[0];
+                let span = 1;
+                const createdEffects = typeParts.slice(1).filter(p =>{
+                    if (type === 'arptriangle' && /^\d+$/.test(p)) {
+                        span = parseInt(p);
+                        return false;
+                    }
+                    return true;
+                });
+                //const createdEffects = typeParts.slice(1);
+                const coordPair = splitCoordPair(parts[1]);
+                let x, y, w, label;
+
+                if (coordPair) {
+                    x = parseMovement(coordPair[0]);
+                    y = parseMovement(coordPair[1]);
+                    w = parts[2] ? parseMovement(parts[2]) : { value: 100, animated: false };
+                    label = type === 'voice' ? (parts[3] || 'text') : undefined;
+                } else {
+                    x = parts[1] ? parseMovement(parts[1]) : { value: 0, animated: false };
+                    y = parts[2] ? parseMovement(parts[2]) : { value: 0, animated: false };
+                    w = parts[3] ? parseMovement(parts[3]) : { value: 100, animated: false };
+                    label = type === 'voice' ? (parts[4] || 'text') : undefined;
+                }
+                //const coordsMatch = (parts[1] || '').match(/^\(([^,]+),([^)]+)\)$/);
+                //const x = coordsMatch ? parseMovement(coordsMatch[1]) : {value:parseFloat(parts[1]), animated:false};
+                //const y = coordsMatch ? parseMovement(coordsMatch[2]) : {value:parseFloat(parts[2]), animated:false};
+                //const w = parseMovement(coordsMatch ? parts[2] : parts[3]) || {value: 100, animated: false};
+                //const x = coordsMatch ? parseFloat(coordsMatch[1]) : parseFloat(parts[1]);
+                //const y = coordsMatch ? parseFloat(coordsMatch[2]) : parseFloat(parts[2]);
+                //const w = parseFloat(coordsMatch ? parts[2] : parts[3]) || 100;
+                //const label = type === 'voice' ? (coordsMatch ? parts[3] : parts[4] || 'text'): undefined;
+                const isFraction = x <= 1 && y <= 1 && w <= 1;
+                const oldShape = shapes.find(os =>
+                    os.type === type &&
+                    Math.abs(resolveValue(os.x) - resolveValue(x)) < 2 &&
+                    Math.abs(resolveValue(os.y) - resolveValue(y)) <2
+                );
+                return {
+                    type,
+                    span,
+                    effects: createdEffects,
+                    x,
+                    y,
+                    w,
+                    label,
+                    insideX: oldShape?.insideX ?? 0.5,
+                    insideY: oldShape?.insideY ?? 0.5,
+                    vol: volVal !== undefined ? volVal: {value: 100, animated:false},
+                    attack: attVal,
+                    release: relVal,
+                    _lastFxKey: oldShape?._lastFxKey ?? null
+                    //_lastFxKey : null
+                };
+                /*const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const w = parseFloat(parts[3]) || 100;
+                const label = type === 'voice' ? (parts[4] || 'text'): undefined;
+                return {type, x, y, w , label};*/
+            })
+            .filter(s=>
+            ['square', 'triangle', 'circle', 'arptriangle', 'diamond', 'sawtooth', 'voice', 'piano', 'violin', 'flute'].includes(s.type)
+            && !isNaN(resolveValue(s.x)) && !isNaN(resolveValue((s.y)) && !isNaN(resolveValue(s.w))
+            //&& !isNaN(resolveValue(s.x)) && !isNaN(resolveValue((s.y)) && !isNaN(resolveValue(s.w))
+            ));
+        }
+        editor.addEventListener('input', syncShapesFromEditor);
+        //highlight code
+        function highlightEditorLine(index){
+            const lines = editor.value.split('\n');
+            let lineNumber = index;
+            if (lines.length > 0 && /^speed\s/i.test(lines[0].trim())){
+                lineNumber += 1;
+            }
+            if (lineNumber < 0|| lineNumber >= lines.length) return;
+            const start = lines
+                .slice(0, lineNumber)
+                .join('\n').length + (lineNumber > 0 ? 1 : 0);
+            const end = start + lines[lineNumber].length;
+            editor.focus();
+            editor.setSelectionRange(start, end);
+        }
+
+        function resizeEditor(){
+            editor.style.height = 'auto';
+            editor.style.height = editor.scrollHeight + 'px';
+        }
+        editor.addEventListener('input', resizeEditor);
+        //copy button
+        document.getElementById('copy-button').addEventListener('click',
+        function(){
+            navigator.clipboard.writeText(editor.value).then(() =>{
+                this.textContent = 'Copied!';
+                this.classList.add('copied');
+                setTimeout(() => {
+                    this.textContent = 'copy';
+                    this.classList.remove('copied');
+                }, 1500);
+            });
+        });
+        //pause play
+        //let playing = true;
+        document.getElementById('pause-play').addEventListener('click', function(){
+            playing = !playing;
+            this.textContent = playing ? 'pause': 'play';
+        });
+        //delete
+        document.getElementById('delete-button').addEventListener('click', function(){
+            shapes = [];
+            voiceIndex = -1;
+            activeShapes.clear();
+            editor.value = '';
+            this.textContent = 'Deleted!';
+            this.classList.add('deleted');
+            setTimeout(() =>{
+                this.textContent = 'delete';
+                this.classList.remove('deleted');
+            }, 1500);
+            });
+        //save
+        document.getElementById('save-button').addEventListener('click', function(){
+            const text = editor.value;
+            const blob = new Blob([text], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'music.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            this.textContent = 'Saved!';
+            this.classList.add('saved');
+            setTimeout(() => {
+                this.textContent = 'save';
+                this.classList.remove('saved');
+            }, 1500);
+        });
+        //load file
+        document.getElementById('load-button').addEventListener('click', function(){
+            document.getElementById('file-input').click();
+        })
+
+        document.getElementById('file-input').addEventListener('change', function(){
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e){
+                editor.value = e.target.result;
+                syncShapesFromEditor();
+            };
+            reader.readAsText(file);
+            this.value = '';
+        });
+
+        document.getElementById('new-page-button').addEventListener('click', function(){
+            totalPages++;
+            resizeCanvas(windowWidth * totalPages, pageHeight);
+        });
+        
+        document.getElementById('mute-button').addEventListener('click', function(){
+            muted = !muted;
+            const vol = muted ? -Infinity :0;
+            squareSynth.volume.value = vol;
+            triangleSynth.volume.value = vol;
+            sineSynth.volume.value = vol;
+            sawtoothSynth.volume.value = vol;
+            arpSynth.volume.value = vol;
+            diamondSynth.volume.value = vol;
+            if (pianoSample) pianoSample.volume.value = vol;
+            if (violinSample) violinSample.volume.value = vol;
+            if (fluteSample) fluteSample.volume.value = vol;
+            this.textContent = muted ? 'unmute' : 'mute';
+        });
+        document.getElementById('sketch').addEventListener('scroll',function(){
+            scrollX = this.scrollLeft /zoomLevel;
+            scrollY = this.scrollTop;
+        });
+        document.getElementById('restart-button').addEventListener('click', function(){
+            scanline = 0;
+        });
+
+        editor.addEventListener('mousedown', () => {canvasFocus = false;});
+        editor.addEventListener('focus',() => {canvasFocus=false;});
+        /*document.getElementById('code-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const cmd = this.value.trim().toLowerCase();
+                if (cmd === 'square' || cmd === 'triangle' || cmd === 'circle') {
+                    shapes.push({ type: cmd, x: width / 2, y: height / 2 });
+                }
+                this.value = '';
+            }});*/
+    </script>
+</body>
+</html>
