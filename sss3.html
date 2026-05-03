@@ -1590,9 +1590,11 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(pianoSample, s.effects); s._lastFxKey = fxKey;}
                 pianoSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){pianoSample.triggerAttack(pitch); s._activePitch = pitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){pianoSample.triggerAttack(safePitch); s._activePitch = safePitch;}
             }
             //violin
             if (s.type === 'violin'){
@@ -1600,9 +1602,11 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(violinSample, s.effects); s._lastFxKey = fxKey;}
                 violinSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){violinSample.triggerAttack(pitch); s._activePitch = pitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){violinSample.triggerAttack(safePitch); s._activePitch = safePitch;}
             }
             //flute
             if (s.type === 'flute'){
@@ -1610,9 +1614,11 @@
                 const fxKey = (s.effects||[]).join('.');
                 if (s._lastFxKey !== fxKey){applyEffectsToSample(fluteSample, s.effects); s._lastFxKey = fxKey;}
                 fluteSample.volume.value = vol;
-                const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
-                  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
-                if(shapeAlpha(s) >0){fluteSample.triggerAttack(pitch); s._activePitch = pitch;}
+                const safePitch = Tone.Frequency(pitch).toMidi() < 21 ? 'A1' :
+                  Tone.Frequency(pitch).toMidi() > 104 ? 'Gs7' : pitch;
+                //const safePitch = Tone.Frequency(pitch).toMidi() < 36 ? 'C2' :
+                //  Tone.Frequency(pitch).toMidi() > 72 ? 'C5' : pitch;
+                if(shapeAlpha(s) >0){fluteSample.triggerAttack(safePitch); s._activePitch = safePitch;}
             }
         }
         function triggerRelease(s){
