@@ -610,6 +610,11 @@
 
         let playing = true;
         let canvasFocus = false;
+
+        let pianoReady = false;
+        let violinReady = false;
+        let fluteReady = false;
+
         function applyZoom(){
             const c = document.querySelector('#sketch canvas');
             if (!c) return;
@@ -727,14 +732,6 @@
 
         function initSamplers(){
     if (pianoSample) return;
-    let loadedCount = 0;
-    function checkReady(){
-        loadedCount++;
-        if (loadedCount >= 3){
-            sampleReady = true;
-            document.getElementById('restart-button').textContent = 'restart ✓';
-        }
-    }
 
     pianoSample = new Tone.Sampler({
         urls: {
@@ -752,7 +749,7 @@
             'Gs1':'Gs1.mp3','Gs2':'Gs2.mp3','Gs3':'Gs3.mp3','Gs4':'Gs4.mp3','Gs5':'Gs5.mp3','Gs6':'Gs6.mp3','Gs7':'Gs7.mp3',
         },
         baseUrl: 'piano/',
-        onload: checkReady
+        onload: () => { pianoReady = true; }
     }).toDestination();
 
     violinSample = new Tone.Sampler({
@@ -763,7 +760,7 @@
             'G3':'G3.mp3','G4':'G4.mp3','G5':'G5.mp3','G6':'G6.mp3'
         },
         baseUrl: 'violin/',
-        onload: checkReady
+        onload: () => { violinReady = true; }
     }).toDestination();
 
     fluteSample = new Tone.Sampler({
@@ -773,7 +770,7 @@
             'E4':'E4.mp3','E5':'E5.mp3','E6':'E6.mp3'
         },
         baseUrl: 'flute/',
-        onload: checkReady
+        onload: () => { fluteReady = true; }
     }).toDestination();
 }
     /*function initSamplers(){
